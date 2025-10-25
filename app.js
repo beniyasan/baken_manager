@@ -6,6 +6,9 @@ let currentPeriod = 'thisMonth';
 let currentImageData = null; // 現在選択されている画像データ
 let betData = []; // すべての馬券データを保存する配列
 let betInputCounter = 0; // 買い目入力行のカウンター
+let currentUser = null; // Supabase 認証済みユーザー
+let authStateSubscription = null;
+let authMode = 'sign-in';
 
 let currentSourceFilter = 'all';
 let currentTrackFilter = 'all';
@@ -59,6 +62,352 @@ function clearDebugLog() {
         logContainer.innerHTML = '';
     }
 }
+
+function resetAuthForm() {
+    const authForm = document.getElementById('auth-form');
+    if (authForm) {
+        authForm.reset();
+    }
+}
+
+// 認証UI制御 ---------------------------------------------------------------
+function setAuthMode(mode) {
+    authMode = mode;
+    const title = document.getElementById('auth-modal-title');
+    const submitButton = document.getElementById('auth-submit-button');
+    const hint = document.getElementById('auth-hint');
+    const note = document.getElementById('auth-note');
+    const switchButton = document.getElementById('auth-switch-button');
+    const displayNameGroup = document.getElementById('auth-display-name-group');
+    const confirmPasswordGroup = document.getElementById('auth-confirm-password-group');
+    const passwordInput = document.getElementById('auth-password');
+    const confirmPasswordInput = document.getElementById('auth-password-confirm');
+
+    if (mode === 'sign-up') {
+        if (title) title.textContent = '新規登録';
+        if (submitButton) submitButton.textContent = '登録する';
+        if (hint) hint.textContent = '登録に使用するメールアドレスとパスワードを入力してください。';
+        if (note) note.textContent = '登録後、確認メールが送信されます。リンクからアカウントを有効化してください。';
+        if (switchButton) switchButton.textContent = 'ログインはこちら';
+        if (displayNameGroup) displayNameGroup.style.display = 'block';
+        if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'block';
+        if (passwordInput) passwordInput.setAttribute('autocomplete', 'new-password');
+        if (confirmPasswordInput) confirmPasswordInput.setAttribute('required', 'required');
+    } else {
+        if (title) title.textContent = 'ログイン';
+        if (submitButton) submitButton.textContent = 'ログイン';
+        if (hint) hint.textContent = 'Supabaseで作成したアカウント情報を入力してください。';
+        if (note) note.textContent = '* アカウント作成は管理者が対応します。';
+        if (switchButton) switchButton.textContent = '新規登録はこちら';
+        if (displayNameGroup) displayNameGroup.style.display = 'none';
+        if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'none';
+        if (passwordInput) passwordInput.setAttribute('autocomplete', 'current-password');
+        if (confirmPasswordInput) confirmPasswordInput.removeAttribute('required');
+    }
+}
+
+function showAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) {
+        setAuthMode(authMode);
+        modal.style.display = 'flex';
+        const targetInputId = authMode === 'sign-up' ? 'auth-display-name' : 'auth-email';
+        const targetInput = document.getElementById(targetInputId) || document.getElementById('auth-email');
+        if (targetInput) {
+            setTimeout(() => targetInput.focus(), 0);
+        }
+    }
+}
+
+function hideAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    resetAuthForm();
+    setAuthMode('sign-in');
+}
+
+function setAppAccess(isAuthenticated) {
+    const guard = document.getElementById('auth-guard');
+    const content = document.getElementById('app-content');
+    if (guard) {
+        guard.style.display = isAuthenticated ? 'none' : 'flex';
+    }
+    if (content) {
+        content.style.display = isAuthenticated ? 'block' : 'none';
+    }
+}
+
+function updateAuthUI(user) {
+    const emailDisplay = document.getElementById('auth-user-email');
+    const signInButton = document.getElementById('sign-in-button');
+    const signOutButton = document.getElementById('sign-out-button');
+    const signUpButton = document.getElementById('sign-up-button');
+
+    if (emailDisplay) {
+        const emailText = user?.email || '未ログイン';
+        emailDisplay.textContent = emailText;
+        emailDisplay.classList.toggle('is-authenticated', Boolean(user));
+    }
+
+    if (signInButton) {
+        signInButton.style.display = user ? 'none' : 'inline-flex';
+    }
+
+    if (signOutButton) {
+        signOutButton.style.display = user ? 'inline-flex' : 'none';
+    }
+
+    if (signUpButton) {
+        signUpButton.style.display = user ? 'none' : 'inline-flex';
+    }
+
+    setAppAccess(Boolean(user));
+}
+
+function setCurrentUser(user) {
+    currentUser = user;
+    updateAuthUI(user);
+    if (user) {
+        hideAuthModal();
+    }
+}
+
+async function handleAuthFormSubmit(event) {
+    event.preventDefault();
+    const emailInput = document.getElementById('auth-email');
+    const passwordInput = document.getElementById('auth-password');
+    const submitButton = document.getElementById('auth-submit-button');
+    const displayNameInput = document.getElementById('auth-display-name');
+    const confirmPasswordInput = document.getElementById('auth-password-confirm');
+
+    if (!emailInput || !passwordInput || !submitButton) {
+        console.error('認証フォームの要素が見つかりません');
+        return;
+    }
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const displayName = displayNameInput ? displayNameInput.value.trim() : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+
+    if (!email || !password) {
+        showToast('メールアドレスとパスワードを入力してください', 'error');
+        return;
+    }
+
+    if (!window.supabaseClient) {
+        console.error('Supabase クライアントが初期化されていません');
+        showToast('ログイン処理を実行できませんでした', 'error');
+        return;
+    }
+
+    if (authMode === 'sign-up') {
+        if (password.length < 6) {
+            showToast('パスワードは6文字以上にしてください', 'error');
+            return;
+        }
+        if (password !== confirmPassword) {
+            showToast('パスワードが一致しません', 'error');
+            return;
+        }
+    }
+
+    submitButton.disabled = true;
+    const originalText = submitButton.textContent;
+    submitButton.textContent = '処理中...';
+
+    try {
+        if (authMode === 'sign-up') {
+            const redirectOrigin = typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http')
+                ? window.location.origin
+                : undefined;
+
+            const { data, error } = await window.supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        display_name: displayName || null
+                    },
+                    emailRedirectTo: redirectOrigin
+                }
+            });
+
+            if (error) {
+                console.error('サインアップエラー:', error);
+                showToast(error.message || '登録に失敗しました', 'error');
+                return;
+            }
+
+            if (data?.session?.user) {
+                showToast('登録が完了しました', 'success');
+            } else {
+                showToast('確認メールを送信しました。メールをご確認ください。', 'info');
+            }
+
+            hideAuthModal();
+            return;
+        } else {
+            const { error } = await window.supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                console.error('ログインエラー:', error);
+                showToast(error.message || 'ログインに失敗しました', 'error');
+                return;
+            }
+
+            emailInput.value = '';
+            passwordInput.value = '';
+            hideAuthModal();
+        }
+    } catch (err) {
+        console.error('ログイン処理中にエラーが発生しました:', err);
+        showToast('処理中に問題が発生しました', 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    }
+}
+
+function initializeAuthUI() {
+    const signInButton = document.getElementById('sign-in-button');
+    const signOutButton = document.getElementById('sign-out-button');
+    const signUpButton = document.getElementById('sign-up-button');
+    const cancelButton = document.getElementById('auth-cancel-button');
+    const authForm = document.getElementById('auth-form');
+    const authModal = document.getElementById('auth-modal');
+    const switchButton = document.getElementById('auth-switch-button');
+    const guardLoginButton = document.getElementById('auth-guard-login-button');
+
+    setAppAccess(Boolean(currentUser));
+
+    if (signInButton) {
+        signInButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            setAuthMode('sign-in');
+            showAuthModal();
+        });
+    }
+
+    if (signUpButton) {
+        signUpButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            setAuthMode('sign-up');
+            showAuthModal();
+        });
+    }
+
+    if (signOutButton) {
+        signOutButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            if (!window.supabaseClient) {
+                showToast('Supabaseクライアントが準備できていません', 'error');
+                return;
+            }
+            const { error } = await window.supabaseClient.auth.signOut();
+            if (error) {
+                console.error('ログアウトエラー:', error);
+                showToast('ログアウトに失敗しました', 'error');
+            }
+        });
+    }
+
+    if (cancelButton) {
+        cancelButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAuthModal();
+        });
+    }
+
+    if (authModal) {
+        authModal.addEventListener('click', (event) => {
+            if (event.target === authModal) {
+                hideAuthModal();
+            }
+        });
+    }
+
+    if (authForm) {
+        authForm.addEventListener('submit', handleAuthFormSubmit);
+    }
+
+    if (switchButton) {
+        switchButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            const nextMode = authMode === 'sign-in' ? 'sign-up' : 'sign-in';
+            setAuthMode(nextMode);
+            const nextFocusId = nextMode === 'sign-up' ? 'auth-display-name' : 'auth-email';
+            const nextFocus = document.getElementById(nextFocusId);
+            if (nextFocus) {
+                setTimeout(() => nextFocus.focus(), 0);
+            }
+        });
+    }
+
+    if (guardLoginButton) {
+        guardLoginButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            setAuthMode('sign-in');
+            showAuthModal();
+        });
+    }
+}
+
+async function initializeAuth() {
+    setAuthMode('sign-in');
+    initializeAuthUI();
+
+    if (!window.supabaseClient) {
+        console.warn('Supabase クライアントが利用できません。config.js を確認してください。');
+        updateAuthUI(null);
+        return;
+    }
+
+    try {
+        const { data, error } = await window.supabaseClient.auth.getSession();
+        if (error) {
+            console.error('セッション取得エラー:', error);
+        }
+        setCurrentUser(data?.session?.user || null);
+    } catch (err) {
+        console.error('セッション確認中にエラーが発生しました:', err);
+    }
+
+    if (authStateSubscription) {
+        authStateSubscription.unsubscribe();
+        authStateSubscription = null;
+    }
+
+    const { data: listener } = window.supabaseClient.auth.onAuthStateChange(
+        (event, session) => {
+            const previousUserId = currentUser ? currentUser.id : null;
+            const nextUser = session?.user || null;
+            setCurrentUser(nextUser);
+
+            if (event === 'SIGNED_IN' && nextUser && nextUser.id !== previousUserId) {
+                showToast('ログインしました', 'success');
+            } else if (event === 'SIGNED_OUT' && previousUserId) {
+                showToast('ログアウトしました', 'info');
+            } else if (event === 'USER_UPDATED') {
+                showToast('プロフィールを更新しました', 'success');
+            }
+        }
+    );
+
+    authStateSubscription = listener?.subscription || null;
+
+    if (authStateSubscription) {
+        window.addEventListener('beforeunload', () => {
+            authStateSubscription?.unsubscribe();
+        }, { once: true });
+    }
+}
+
 
 function normalizeOcrText(rawText) {
     if (!rawText) {
@@ -1905,4 +2254,5 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 他の初期化処理
   initApp();
+  initializeAuth();
 });

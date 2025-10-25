@@ -8,6 +8,24 @@
 </head>
 <body>
     <div class="app-container">
+        <div class="auth-bar">
+            <div class="auth-status">
+                <span id="auth-user-email" class="auth-user-email">未ログイン</span>
+                <div class="auth-buttons">
+                    <button id="sign-in-button" class="btn btn-secondary btn-sm">ログイン</button>
+                    <button id="sign-up-button" class="btn btn-outline btn-sm">新規登録</button>
+                    <button id="sign-out-button" class="btn btn-secondary btn-sm" style="display: none;">ログアウト</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="auth-guard" class="auth-guard" style="display: none;">
+            <h2 class="auth-guard-title">ログインが必要です</h2>
+            <p class="auth-guard-message">ログインすると馬券データの管理・統計機能をご利用いただけます。</p>
+            <button id="auth-guard-login-button" class="btn btn-primary">ログインする</button>
+        </div>
+
+        <div id="app-content" style="display: none;">
         <!-- ナビゲーション -->
         <nav class="nav-tabs">
             <button class="nav-tab active" data-view="list">データ一覧</button>
@@ -275,6 +293,41 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- 認証モーダル -->
+    <div id="auth-modal" class="modal" style="display: none;">
+        <div class="modal-content auth-modal">
+            <h3 id="auth-modal-title">ログイン</h3>
+            <form id="auth-form">
+                <div class="form-group" id="auth-display-name-group" style="display: none;">
+                    <label for="auth-display-name">表示名（任意）</label>
+                    <input type="text" id="auth-display-name" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="auth-email">メールアドレス</label>
+                    <input type="email" id="auth-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="auth-password">パスワード</label>
+                    <input type="password" id="auth-password" required autocomplete="current-password">
+                </div>
+                <div class="form-group" id="auth-confirm-password-group" style="display: none;">
+                    <label for="auth-password-confirm">パスワード確認</label>
+                    <input type="password" id="auth-password-confirm" autocomplete="new-password">
+                </div>
+                <p class="auth-hint" id="auth-hint">Supabaseで作成したアカウント情報を入力してください。</p>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="auth-cancel-button">キャンセル</button>
+                    <button type="submit" class="btn btn-primary" id="auth-submit-button">ログイン</button>
+                </div>
+            </form>
+            <div class="auth-switch">
+                <button type="button" class="btn-link" id="auth-switch-button">新規登録はこちら</button>
+            </div>
+            <p class="auth-note" id="auth-note">* アカウント作成は管理者が対応します。</p>
+        </div>
+    </div>
 
     <!-- 削除確認モーダル -->
     <div id="delete-modal" class="modal" style="display: none;">
@@ -299,12 +352,13 @@
     <!-- トースト通知 -->
     <div id="toast" class="toast" style="display: none;"></div>
 
+    <!-- 設定ファイル（APIキーなど） -->
+    <script src="config.js"></script>
+
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="libs/supabaseClient.js"></script>
 
-    <!-- Google Cloud Vision API 設定 -->
-    <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

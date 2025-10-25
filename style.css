@@ -761,6 +761,60 @@ body {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* 認証バー */
+.auth-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.auth-user-email {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.auth-user-email.is-authenticated {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.auth-guard {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 80px 20px;
+    text-align: center;
+    min-height: 320px;
+}
+
+.auth-guard-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.auth-guard-message {
+    font-size: 14px;
+    color: #4b5563;
+    max-width: 420px;
+}
+
 /* ナビゲーション */
 .nav-tabs {
     display: flex;
@@ -1442,6 +1496,49 @@ body {
     max-width: 400px;
     width: 90%;
     text-align: center;
+}
+
+.modal-content.auth-modal {
+    max-width: 420px;
+    width: 90%;
+    text-align: left;
+    padding: 32px;
+}
+
+.auth-hint {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 8px;
+    margin-bottom: 20px;
+}
+
+.auth-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 20px;
+}
+
+.auth-buttons .btn {
+    min-width: 88px;
+}
+
+.auth-switch {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: underline;
+    padding: 0;
+}
+
+.btn-link:hover {
+    color: #1d4ed8;
 }
 
 /* 画像拡大モーダル */
