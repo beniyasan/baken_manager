@@ -8,6 +8,7 @@ let betData = []; // すべての馬券データを保存する配列
 let betInputCounter = 0; // 買い目入力行のカウンター
 let currentUser = null; // Supabase 認証済みユーザー
 let authStateSubscription = null;
+let betDataLoaded = false;
 let authMode = 'sign-in';
 
 let currentSourceFilter = 'all';
@@ -63,10 +64,102 @@ function clearDebugLog() {
     }
 }
 
+function isSupabaseReady() {
+    return Boolean(window.supabaseClient && currentUser);
+}
+
+function mapRowToBet(row) {
+    const betsArray = Array.isArray(row?.bets) ? row.bets : [];
+    const totalPurchase = typeof row?.amount_bet === 'number' ? row.amount_bet : 0;
+    const payout = typeof row?.amount_returned === 'number' ? row.amount_returned : 0;
+    const raceDate = row?.race_date ? String(row.race_date) : null;
+    const createdAt = row?.created_at ? new Date(row.created_at).getTime() : Date.now();
+
+    return {
+        id: row?.id,
+        date: raceDate,
+        source: row?.source || '不明',
+        raceName: row?.race_name || '',
+        track: row?.track || '',
+        bets: betsArray,
+        totalPurchase,
+        payout,
+        recoveryRate: totalPurchase > 0 ? (payout / totalPurchase) * 100 : 0,
+        memo: row?.memo || '',
+        imageData: row?.image_data || null,
+        createdAt
+    };
+}
+
+function buildBetPayload(bet) {
+    const totalPurchase = bet.totalPurchase || 0;
+    const payout = bet.payout || 0;
+    const track = bet.track || null;
+
+    return {
+        user_id: currentUser?.id,
+        race_date: bet.date || null,
+        source: bet.source || 'unknown',
+        race_name: bet.raceName || null,
+        track,
+        ticket_type: Array.isArray(bet.bets) && bet.bets.length === 1 ? bet.bets[0].type : 'multiple',
+        amount_bet: totalPurchase,
+        amount_returned: payout,
+        memo: bet.memo || null,
+        bets: Array.isArray(bet.bets) ? bet.bets : [],
+        image_data: bet.imageData || null,
+        recovery_rate: bet.recoveryRate ?? (totalPurchase > 0 ? (payout / totalPurchase) * 100 : 0)
+    };
+}
+
+function sortBetData() {
+    betData.sort((a, b) => {
+        const dateDiff = new Date(b.date || 0) - new Date(a.date || 0);
+        if (dateDiff !== 0) {
+            return dateDiff;
+        }
+        return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+}
+
 function resetAuthForm() {
     const authForm = document.getElementById('auth-form');
     if (authForm) {
         authForm.reset();
+    }
+    const displayNameGroup = document.getElementById('auth-display-name-group');
+    const confirmPasswordGroup = document.getElementById('auth-confirm-password-group');
+    if (displayNameGroup) displayNameGroup.style.display = 'none';
+    if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'none';
+}
+
+function resetPasswordForm() {
+    const resetForm = document.getElementById('reset-form');
+    if (resetForm) {
+        resetForm.reset();
+    }
+}
+
+function showResetModal() {
+    const modal = document.getElementById('reset-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        const emailInput = document.getElementById('reset-email');
+        if (emailInput) {
+            setTimeout(() => emailInput.focus(), 0);
+        }
+    }
+}
+
+function hideResetModal(showLogin = false) {
+    const modal = document.getElementById('reset-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    resetPasswordForm();
+    if (showLogin) {
+        setAuthMode('sign-in');
+        showAuthModal();
     }
 }
 
@@ -76,12 +169,13 @@ function setAuthMode(mode) {
     const title = document.getElementById('auth-modal-title');
     const submitButton = document.getElementById('auth-submit-button');
     const hint = document.getElementById('auth-hint');
-    const note = document.getElementById('auth-note');
     const switchButton = document.getElementById('auth-switch-button');
     const displayNameGroup = document.getElementById('auth-display-name-group');
     const confirmPasswordGroup = document.getElementById('auth-confirm-password-group');
     const passwordInput = document.getElementById('auth-password');
     const confirmPasswordInput = document.getElementById('auth-password-confirm');
+    const resetLink = document.getElementById('auth-reset-link');
+    const note = document.getElementById('auth-note');
 
     if (mode === 'sign-up') {
         if (title) title.textContent = '新規登録';
@@ -93,16 +187,18 @@ function setAuthMode(mode) {
         if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'block';
         if (passwordInput) passwordInput.setAttribute('autocomplete', 'new-password');
         if (confirmPasswordInput) confirmPasswordInput.setAttribute('required', 'required');
+        if (resetLink) resetLink.style.display = 'none';
     } else {
         if (title) title.textContent = 'ログイン';
         if (submitButton) submitButton.textContent = 'ログイン';
-        if (hint) hint.textContent = 'Supabaseで作成したアカウント情報を入力してください。';
-        if (note) note.textContent = '* アカウント作成は管理者が対応します。';
+        if (hint) hint.textContent = '登録済みのメールアドレスとパスワードを入力してください。';
+        if (note) note.textContent = 'パスワードをお忘れの場合は再設定リンクをご利用ください。';
         if (switchButton) switchButton.textContent = '新規登録はこちら';
         if (displayNameGroup) displayNameGroup.style.display = 'none';
         if (confirmPasswordGroup) confirmPasswordGroup.style.display = 'none';
         if (passwordInput) passwordInput.setAttribute('autocomplete', 'current-password');
         if (confirmPasswordInput) confirmPasswordInput.removeAttribute('required');
+        if (resetLink) resetLink.style.display = 'inline';
     }
 }
 
@@ -171,6 +267,19 @@ function setCurrentUser(user) {
     updateAuthUI(user);
     if (user) {
         hideAuthModal();
+        betDataLoaded = false;
+        loadDataList()
+            .then(() => loadStats())
+            .catch((error) => {
+                console.error('初期データ読み込み中にエラーが発生しました:', error);
+            });
+    } else {
+        betData = [];
+        betDataLoaded = true;
+        currentImageData = null;
+        loadDataList()
+            .then(() => loadStats())
+            .catch(() => {});
     }
 }
 
@@ -274,6 +383,61 @@ async function handleAuthFormSubmit(event) {
     }
 }
 
+async function handleResetFormSubmit(event) {
+    event.preventDefault();
+    const emailInput = document.getElementById('reset-email');
+    const submitButton = document.getElementById('reset-submit-button');
+
+    if (!emailInput || !submitButton) {
+        console.error('パスワード再設定フォームの要素が見つかりません');
+        return;
+    }
+
+    const email = emailInput.value.trim();
+    if (!email) {
+        showToast('メールアドレスを入力してください', 'error');
+        return;
+    }
+
+    if (!window.supabaseClient) {
+        console.error('Supabase クライアントが初期化されていません');
+        showToast('再設定処理を実行できませんでした', 'error');
+        return;
+    }
+
+    submitButton.disabled = true;
+    const originalText = submitButton.textContent;
+    submitButton.textContent = '送信中...';
+
+    try {
+        const redirectOrigin = (typeof window !== 'undefined' &&
+            window.location &&
+            window.location.origin &&
+            window.location.origin.startsWith('http'))
+            ? window.location.origin
+            : undefined;
+
+        const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+            redirectTo: redirectOrigin
+        });
+
+        if (error) {
+            console.error('パスワード再設定エラー:', error);
+            showToast(error.message || '再設定メールの送信に失敗しました', 'error');
+            return;
+        }
+
+        showToast('再設定メールを送信しました。メールをご確認ください。', 'info');
+        hideResetModal();
+    } catch (err) {
+        console.error('パスワード再設定中にエラーが発生しました:', err);
+        showToast('再設定手続き中に問題が発生しました', 'error');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    }
+}
+
 function initializeAuthUI() {
     const signInButton = document.getElementById('sign-in-button');
     const signOutButton = document.getElementById('sign-out-button');
@@ -283,6 +447,10 @@ function initializeAuthUI() {
     const authModal = document.getElementById('auth-modal');
     const switchButton = document.getElementById('auth-switch-button');
     const guardLoginButton = document.getElementById('auth-guard-login-button');
+    const resetLink = document.getElementById('auth-reset-link');
+    const resetModal = document.getElementById('reset-modal');
+    const resetCancelButton = document.getElementById('reset-cancel-button');
+    const resetForm = document.getElementById('reset-form');
 
     setAppAccess(Boolean(currentUser));
 
@@ -355,6 +523,33 @@ function initializeAuthUI() {
             setAuthMode('sign-in');
             showAuthModal();
         });
+    }
+
+    if (resetLink) {
+        resetLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideAuthModal();
+            showResetModal();
+        });
+    }
+
+    if (resetCancelButton) {
+        resetCancelButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            hideResetModal(true);
+        });
+    }
+
+    if (resetModal) {
+        resetModal.addEventListener('click', (event) => {
+            if (event.target === resetModal) {
+                hideResetModal(true);
+            }
+        });
+    }
+
+    if (resetForm) {
+        resetForm.addEventListener('submit', handleResetFormSubmit);
     }
 }
 
@@ -532,7 +727,7 @@ function initSampleData() {
     if (betData.length === 0) {
         betData = [
             {
-                id: 1,
+                id: '1',
                 date: '2025-10-20',
                 source: '即pat',
                 raceName: '東京11R 天皇賞',
@@ -568,37 +763,150 @@ function initSampleData() {
 }
 
 // データ操作関数
-function addBet(newBetData) {
-    return new Promise((resolve) => {
-        newBetData.id = Date.now(); // ユニークID生成
+async function addBet(newBetData) {
+    if (!isSupabaseReady()) {
+        const localId = Date.now().toString();
+        newBetData.id = localId;
         newBetData.createdAt = Date.now();
         betData.push(newBetData);
-        resolve(newBetData.id);
-    });
+        sortBetData();
+        betDataLoaded = true;
+        return localId;
+    }
+
+    try {
+        const payload = buildBetPayload(newBetData);
+        const { data, error } = await window.supabaseClient
+            .from('bets')
+            .insert(payload)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        const inserted = mapRowToBet(data);
+        betData.push(inserted);
+        sortBetData();
+        betDataLoaded = true;
+        return inserted.id;
+    } catch (error) {
+        console.error('Bet insert error:', error);
+        showToast('データの保存に失敗しました', 'error');
+        throw error;
+    }
 }
 
-function updateBet(id, updatedBetData) {
-    return new Promise((resolve) => {
-        const index = betData.findIndex(bet => bet.id === id);
+async function updateBet(id, updatedBetData) {
+    if (!isSupabaseReady()) {
+        const index = betData.findIndex(bet => String(bet.id) === String(id));
         if (index !== -1) {
             updatedBetData.id = id;
             betData[index] = updatedBetData;
+            sortBetData();
         }
-        resolve(id);
-    });
+        betDataLoaded = true;
+        return id;
+    }
+
+    try {
+        const payload = buildBetPayload(updatedBetData);
+        delete payload.user_id;
+
+        const { data, error } = await window.supabaseClient
+            .from('bets')
+            .update(payload)
+            .eq('id', id)
+            .eq('user_id', currentUser.id)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        const mapped = mapRowToBet(data);
+        const index = betData.findIndex(bet => String(bet.id) === String(id));
+        if (index !== -1) {
+            betData[index] = mapped;
+            sortBetData();
+        }
+        betDataLoaded = true;
+        return id;
+    } catch (error) {
+        console.error('Bet update error:', error);
+        showToast('データの更新に失敗しました', 'error');
+        throw error;
+    }
 }
 
-function deleteBet(id) {
-    return new Promise((resolve) => {
-        betData = betData.filter(bet => bet.id !== id);
-        resolve();
-    });
+async function deleteBet(id) {
+    if (!isSupabaseReady()) {
+        betData = betData.filter(bet => String(bet.id) !== String(id));
+        betDataLoaded = true;
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('bets')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', currentUser.id);
+
+        if (error) {
+            throw error;
+        }
+
+        betData = betData.filter(bet => String(bet.id) !== String(id));
+        betDataLoaded = true;
+    } catch (error) {
+        console.error('Bet delete error:', error);
+        showToast('データの削除に失敗しました', 'error');
+        throw error;
+    }
 }
 
-function getAllBets() {
-    return new Promise((resolve) => {
-        resolve([...betData]);
-    });
+async function getAllBets(forceRefresh = false) {
+    if (isSupabaseReady()) {
+        if (!betDataLoaded || forceRefresh) {
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('bets')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('race_date', { ascending: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                betData = (data || []).map(mapRowToBet);
+                sortBetData();
+                betDataLoaded = true;
+            } catch (error) {
+                console.error('Bet fetch error:', error);
+                showToast('データの取得に失敗しました', 'error');
+                betData = [];
+                betDataLoaded = true;
+            }
+        }
+        return [...betData];
+    }
+
+    // Supabase クライアント自体が利用できない場合のみサンプルデータを使用
+    if (!window.supabaseClient) {
+        if (!betDataLoaded) {
+            initSampleData();
+            betDataLoaded = true;
+        }
+    } else {
+        betData = [];
+        betDataLoaded = true;
+    }
+    return [...betData];
 }
 
 function extractTrackName(raceName) {
@@ -615,7 +923,7 @@ function populateTrackFilter(bets) {
 
     const tracks = new Set();
     bets.forEach(bet => {
-        const track = extractTrackName(bet.raceName);
+        const track = bet.track || extractTrackName(bet.raceName);
         if (track) {
             tracks.add(track);
         }
@@ -673,9 +981,9 @@ function showView(viewName) {
 window.showView = showView;
 
 // データ一覧の表示
-async function loadDataList() {
+async function loadDataList(forceRefresh = false) {
     try {
-        const bets = await getAllBets();
+        const bets = await getAllBets(forceRefresh);
         const tableBody = document.getElementById('data-table-body');
         const noDataMessage = document.getElementById('no-data-message');
         const dataTable = document.getElementById('data-table');
@@ -697,19 +1005,20 @@ async function loadDataList() {
             const thumbnailHtml = bet.imageData 
                 ? `<img src="${bet.imageData}" alt="サムネイル" class="thumbnail" onclick="showImageModal('${bet.imageData}')">`
                 : `<div class="no-image-placeholder">画像なし</div>`;
+            const escapedId = String(bet.id ?? '').replace(/'/g, "\\'");
             
             return `
                 <tr>
                     <td>${thumbnailHtml}</td>
-                    <td>${formatDate(bet.date)}</td>
+                    <td>${bet.date ? formatDate(bet.date) : '-'}</td>
                     <td><span class="source-badge">${bet.source}</span></td>
                     <td>¥${bet.totalPurchase.toLocaleString()}</td>
                     <td>${bet.bets ? bet.bets.length : 1}点</td>
                     <td>¥${bet.payout.toLocaleString()}</td>
                     <td><span class="recovery-rate ${recoveryClass}">${bet.recoveryRate.toFixed(1)}%</span></td>
                     <td class="action-buttons">
-                        <button class="btn btn-sm btn-secondary" onclick="editBet(${bet.id})">編集</button>
-                        <button class="btn btn-sm btn-danger" onclick="showDeleteModal(${bet.id})">削除</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editBet('${escapedId}')">編集</button>
+                        <button class="btn btn-sm btn-danger" onclick="showDeleteModal('${escapedId}')">削除</button>
                     </td>
                 </tr>
             `;
@@ -791,6 +1100,7 @@ function setupForm() {
             date: document.getElementById('bet-date').value,
             source: document.getElementById('bet-source').value,
             raceName: document.getElementById('race-name').value.trim() || null,
+            track: document.getElementById('track-select').value || null,
             bets: betsData,
             totalPurchase: totalPurchase,
             payout: parseInt(document.getElementById('payout').value) || 0,
@@ -816,6 +1126,7 @@ function setupForm() {
             
             resetForm();
             showView('list');
+            await loadStats();
         } catch (error) {
             console.error('保存エラー:', error);
             showToast('保存に失敗しました', 'error');
@@ -830,6 +1141,10 @@ function resetForm() {
     document.getElementById('total-amount').textContent = '¥0';
     document.getElementById('input-title').textContent = '新規データ追加';
     editingId = null;
+    const trackSelect = document.getElementById('track-select');
+    if (trackSelect) {
+        trackSelect.value = '';
+    }
     
     // 買い目入力をリセット
     const container = document.getElementById('bet-inputs-container');
@@ -847,12 +1162,16 @@ function resetForm() {
 
 function editBet(id) {
     getAllBets().then(bets => {
-        const bet = bets.find(b => b.id === id);
+        const bet = bets.find(b => String(b.id) === String(id));
         if (bet) {
             // フォームに値をセット
             document.getElementById('bet-date').value = bet.date;
             document.getElementById('bet-source').value = bet.source;
             document.getElementById('race-name').value = bet.raceName || '';
+            const trackSelect = document.getElementById('track-select');
+            if (trackSelect) {
+                trackSelect.value = bet.track || '';
+            }
             document.getElementById('payout').value = bet.payout;
             document.getElementById('memo').value = bet.memo || '';
             
@@ -894,7 +1213,7 @@ function cancelEdit() {
 
 // 削除機能
 function showDeleteModal(id) {
-    deleteId = id;
+    deleteId = String(id);
     document.getElementById('delete-modal').style.display = 'flex';
 }
 
@@ -934,7 +1253,8 @@ async function confirmDelete() {
         try {
             await deleteBet(deleteId);
             showToast('データを削除しました', 'success');
-            loadDataList();
+            await loadDataList(true);
+            await loadStats();
         } catch (error) {
             console.error('削除エラー:', error);
             showToast('削除に失敗しました', 'error');
@@ -987,7 +1307,7 @@ function filterBets(bets) {
         }
 
         if (currentTrackFilter !== 'all') {
-            const track = extractTrackName(bet.raceName);
+            const track = bet.track || extractTrackName(bet.raceName);
             if (track !== currentTrackFilter) {
                 return false;
             }
@@ -1412,8 +1732,11 @@ function setupEventListeners() {
 // アプリ初期化
 async function initApp() {
     try {
-        // サンプルデータで初期化
-        initSampleData();
+        // Supabase が利用できない場合のみサンプルデータを初期化
+        if (!window.supabaseClient) {
+            initSampleData();
+            betDataLoaded = true;
+        }
         
         // イベントリスナーとフォーム設定
         setupEventListeners();

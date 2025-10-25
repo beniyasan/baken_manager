@@ -324,8 +324,27 @@
             </form>
             <div class="auth-switch">
                 <button type="button" class="btn-link" id="auth-switch-button">新規登録はこちら</button>
+                <button type="button" class="btn-link" id="auth-reset-link">パスワードをお忘れの方</button>
             </div>
-            <p class="auth-note" id="auth-note">* アカウント作成は管理者が対応します。</p>
+            <p class="auth-note" id="auth-note">登録済みのメールアドレスとパスワードを入力してください。</p>
+        </div>
+    </div>
+
+    <!-- パスワード再設定モーダル -->
+    <div id="reset-modal" class="modal" style="display: none;">
+        <div class="modal-content auth-modal">
+            <h3>パスワード再設定</h3>
+            <form id="reset-form">
+                <p class="auth-description">登録済みのメールアドレスを入力すると、パスワード再設定用のリンクをお送りします。</p>
+                <div class="form-group">
+                    <label for="reset-email">メールアドレス</label>
+                    <input type="email" id="reset-email" required autocomplete="email">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="reset-cancel-button">戻る</button>
+                    <button type="submit" class="btn btn-primary" id="reset-submit-button">送信する</button>
+                </div>
+            </form>
         </div>
     </div>
 

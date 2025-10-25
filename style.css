@@ -1518,12 +1518,23 @@ body {
     margin-top: 20px;
 }
 
+.auth-description {
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
 .auth-buttons .btn {
     min-width: 88px;
 }
 
 .auth-switch {
     margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
     text-align: center;
 }
 
