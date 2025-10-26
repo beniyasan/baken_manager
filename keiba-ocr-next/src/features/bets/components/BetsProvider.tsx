@@ -1,7 +1,7 @@
-\"use client\";
+"use client";
 
-import { PropsWithChildren, createContext, useContext } from \"react\";
-import { useBets } from \"../hooks\";
+import { PropsWithChildren, createContext, useContext } from "react";
+import { useBets } from "../hooks";
 
 type BetsContextValue = ReturnType<typeof useBets>;
 
@@ -15,7 +15,7 @@ export const BetsProvider = ({ children }: PropsWithChildren) => {
 export const useBetsContext = () => {
   const ctx = useContext(BetsContext);
   if (!ctx) {
-    throw new Error(\"useBetsContext must be used within BetsProvider\");
+    throw new Error("useBetsContext must be used within BetsProvider");
   }
   return ctx;
 };

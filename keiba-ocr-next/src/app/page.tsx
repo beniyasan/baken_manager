@@ -119,7 +119,8 @@ export default function HomePage() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      const formData = new FormData(event.currentTarget);
+      const form = event.currentTarget;
+      const formData = new FormData(form);
       const email = String(formData.get("email") || "").trim();
       const password = String(formData.get("password") || "");
       const displayName = String(formData.get("displayName") || "").trim();
@@ -149,7 +150,7 @@ export default function HomePage() {
             password,
           });
           if (error) throw error;
-          event.currentTarget.reset();
+          form.reset();
           setAuthModalOpen(false);
         } else {
           const redirectOrigin =
@@ -175,7 +176,7 @@ export default function HomePage() {
           } else {
             showToast("確認メールを送信しました。メールをご確認ください。", "info");
           }
-          event.currentTarget.reset();
+          form.reset();
           setAuthModalOpen(false);
           setAuthMode("sign-in");
         }
@@ -192,7 +193,8 @@ export default function HomePage() {
   const handleResetSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const formData = new FormData(event.currentTarget);
+      const form = event.currentTarget;
+      const formData = new FormData(form);
       const email = String(formData.get("resetEmail") || "").trim();
 
       if (!email) {
@@ -213,7 +215,7 @@ export default function HomePage() {
         if (error) throw error;
 
         showToast("再設定メールを送信しました。メールをご確認ください。", "info");
-        event.currentTarget.reset();
+        form.reset();
         setResetModalOpen(false);
       } catch (error: any) {
         console.error("パスワード再設定エラー", error);

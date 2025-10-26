@@ -247,19 +247,53 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
     }
   };
 
-  const handleRunOcr = async () => {
-    if (!imageData) {
-      setError("先に画像をアップロードしてください");
-      return;
-    }
+  const fileToBase64 = (file: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+      reader.readAsDataURL(file);
+    });
 
+  const resolveImageBase64 = async () => {
+    if (imageData) return imageData;
+    if (selectedFile) {
+      const base64 = await fileToBase64(selectedFile);
+      setImageData(base64);
+      return base64;
+    }
+    if (imagePreview) {
+      if (imagePreview.startsWith("data:")) {
+        setImageData(imagePreview);
+        return imagePreview;
+      }
+      if (imagePreview.startsWith("http")) {
+        const response = await fetch(imagePreview);
+        if (!response.ok) {
+          throw new Error("保存済み画像の取得に失敗しました");
+        }
+        const blob = await response.blob();
+        const base64 = await fileToBase64(blob);
+        setImageData(base64);
+        return base64;
+      }
+    }
+    return null;
+  };
+
+  const handleRunOcr = async () => {
     setError(null);
     setOcrLoading(true);
     try {
+      const base64Image = await resolveImageBase64();
+      if (!base64Image) {
+        throw new Error("先に画像をアップロードしてください");
+      }
+
       const response = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageData }),
+        body: JSON.stringify({ imageData: base64Image }),
       });
 
       if (!response.ok) {
@@ -474,11 +508,11 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
         <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
           <input type="file" accept="image/*" onChange={handleImageSelect} />
           <p className="mt-2 text-xs text-slate-500">画像は Supabase Storage に保存されます。</p>
-          {imagePreview && (
-            <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <img src={imagePreview} alt="プレビュー" className="h-auto w-full" />
-            </div>
-          )}
+      {imagePreview && (
+        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <img src={imagePreview} alt="プレビュー" className="h-auto w-full" />
+        </div>
+      )}
           {(existingImagePath || selectedFile) && (
             <button
               type="button"
@@ -497,8 +531,8 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           )}
           <button
             type="button"
-            onClick={handleRunOcr}
-            disabled={ocrLoading || !imageData}
+          onClick={handleRunOcr}
+          disabled={ocrLoading || (!selectedFile && !imageData && !imagePreview)}
             className="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {ocrLoading ? "解析中..." : "OCRで自動入力"}
@@ -537,9 +571,7 @@ const TextField = ({ label, className, ...props }: { label: string; className?: 
     <label className="text-sm font-medium text-slate-700">{label}</label>
     <input
       {...props}
-      className={`w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 ${
-        props.className ?? ""
-      }`}
+      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
     />
   </div>
 );
@@ -560,9 +592,7 @@ const SelectField = ({
     <label className="text-sm font-medium text-slate-700">{label}</label>
     <select
       {...props}
-      className={`w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 ${
-        props.className ?? ""
-      }`}
+      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
     >
       <option value="">{placeholder}</option>
       {options.map((option) => (

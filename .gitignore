@@ -6,4 +6,5 @@ sample.png
 **/.env
 **/.env.*
 **/*.env
+.serena/
 .well-known/
