@@ -1,3 +1,9 @@
 config.js
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+**/*.env
 .serena/
 .well-known/
