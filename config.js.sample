@@ -3,3 +3,10 @@
 // コミット前に実際のキーを含めないようご注意ください。
 window.GCV_API_KEY = window.GCV_API_KEY || '';
 window.PERPLEXITY_API_KEY = window.PERPLEXITY_API_KEY || '';
+
+// Supabase の URL と anon キーを設定してください。
+// 例:
+// window.SUPABASE_URL = window.SUPABASE_URL || 'https://xxxx.supabase.co';
+// window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'ey...';
+window.SUPABASE_URL = window.SUPABASE_URL || '';
+window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';

@@ -1,9 +1,9 @@
 config.js
+sample.png
 .env
 .env.*
 *.env
 **/.env
 **/.env.*
 **/*.env
-.serena/
 .well-known/
