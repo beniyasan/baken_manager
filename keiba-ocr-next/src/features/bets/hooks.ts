@@ -70,6 +70,7 @@ const mapBetToPayload = (bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
     })),
     image_path: bet.imagePath ?? null,
     recovery_rate: totalPurchase > 0 ? (payout / totalPurchase) * 100 : 0,
+    user_id: bet.userId ?? null,
   };
 };
 
@@ -130,7 +131,10 @@ export const useBets = () => {
   }, []);
 
   const updateBet = useCallback(async (id: string, bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
-    const payload = mapBetToPayload(bet);
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("ログインが必要です");
+
+    const payload = { ...mapBetToPayload(bet), user_id: user.id };
 
     const { data, error: updateError } = await supabaseClient
       .from("bets")

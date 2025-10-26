@@ -50,16 +50,22 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json();
-    const content = result?.choices?.[0]?.message?.content;
-    if (!content) {
+    const contentRaw = result?.choices?.[0]?.message?.content;
+    if (!contentRaw) {
       return NextResponse.json({ error: "Perplexity 応答が不正です" }, { status: 500 });
     }
 
     let structured;
     try {
-      structured = JSON.parse(content);
+      const fencedMatch = contentRaw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const content = fencedMatch ? fencedMatch[1] : contentRaw;
+      const trimmed = content.trim()
+        .replace(/^```(?:json)?/i, "")
+        .replace(/```$/, "")
+        .trim();
+      structured = JSON.parse(trimmed);
     } catch (parseError) {
-      console.error("Perplexity 応答のJSON解析に失敗", parseError, content);
+      console.error("Perplexity 応答のJSON解析に失敗", parseError, contentRaw);
       return NextResponse.json({ error: "Perplexity 応答の JSON 解析に失敗しました" }, { status: 500 });
     }
 

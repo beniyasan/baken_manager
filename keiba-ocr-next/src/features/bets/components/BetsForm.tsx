@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, FormEvent, InputHTMLAttributes, SelectHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, FormEvent, InputHTMLAttributes, SelectHTMLAttributes, DragEvent } from "react";
 import type { BetRecord, BetTicket } from "@/lib/types";
 import { useBetsContext } from "./BetsProvider";
 import { mergeOcrResults, parseOcrText } from "../utils/ocr";
@@ -89,6 +89,8 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (!editingBet) {
@@ -160,10 +162,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
     });
   };
 
-  const handleImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const processSelectedFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
       setError("画像ファイルを選択してください");
       return;
@@ -182,6 +181,34 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
       setError("画像の読み込みに失敗しました");
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    processSelectedFile(file);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      processSelectedFile(file);
+    }
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isDragging) setIsDragging(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -505,9 +532,27 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
 
       <div className="mt-6 space-y-2">
         <label className="text-sm font-medium text-slate-700">画像</label>
-        <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
-          <input type="file" accept="image/*" onChange={handleImageSelect} />
-          <p className="mt-2 text-xs text-slate-500">画像は Supabase Storage に保存されます。</p>
+        <div
+          className={`rounded-lg border-2 border-dashed p-6 text-sm transition ${
+            isDragging
+              ? "border-slate-400 bg-white shadow-lg shadow-slate-300/40"
+              : "border-slate-300 bg-slate-50"
+          } text-slate-500`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" ref={fileInputRef} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-3 inline-flex items-center rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+          >
+            ファイルを選択
+          </button>
+          <p className="mt-2 text-xs text-slate-500">
+            クリックまたはドラッグ＆ドロップで画像を選択できます。画像は Supabase Storage に保存されます。
+          </p>
       {imagePreview && (
         <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <img src={imagePreview} alt="プレビュー" className="h-auto w-full" />
@@ -532,7 +577,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           <button
             type="button"
           onClick={handleRunOcr}
-          disabled={ocrLoading || (!selectedFile && !imageData && !imagePreview)}
+          disabled={ocrLoading}
             className="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {ocrLoading ? "解析中..." : "OCRで自動入力"}

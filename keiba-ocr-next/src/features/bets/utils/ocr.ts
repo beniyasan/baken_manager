@@ -79,12 +79,22 @@ const normalizeOcrText = (rawText: string) => {
   normalized = normalized.replace(/[Ａ-Ｚ]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xff21 + 65));
   normalized = normalized.replace(/[ａ-ｚ]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xff41 + 97));
   normalized = normalized.replace(/[／⁄]/g, "/");
+  normalized = normalized.replace(/三連単/g, "3連単");
+  normalized = normalized.replace(/三連複/g, "3連複");
   normalized = normalized.replace(/ＳＰＡＴ/g, "SPAT");
   normalized = normalized.replace(/ｓｐａｔ/g, "spat");
   normalized = normalized.replace(/\|(?=\d)/g, " ");
   normalized = normalized.replace(/\|(?!\s)/g, " | ");
   normalized = normalized.replace(/(\d)[っつづッﾂ](\d)(?=\d)/g, "$1っ$2っ");
   return normalized;
+};
+
+const normalizeBetType = (input: string): string => {
+  const aliasMap: Record<string, string> = {
+    "三連単": "3連単",
+    "三連複": "3連複",
+  };
+  return aliasMap[input] ?? input;
 };
 
 export const parseOcrText = (rawText: string): ParsedOcrResult => {
@@ -179,20 +189,63 @@ export const mergeOcrResults = (base: ParsedOcrResult, structured?: StructuredOc
   merged.memo = structured.memo ?? base.memo;
 
   if (structured.bets && structured.bets.length) {
-    merged.bets = structured.bets
-      .map((ticket) => {
-        const numbers = Array.isArray(ticket.numbers) && ticket.numbers.length
-          ? ticket.numbers.join("-")
-          : "";
-        const amount = typeof ticket.amount === "number" ? ticket.amount : 0;
-        const type = ticket.type ?? "その他";
-        if (!numbers || amount <= 0) return null;
+    const structuredBets = structured.bets
+      .map((ticket, index) => {
+        const baseFallback = base.bets[index] ?? base.bets.find((candidate) => {
+          if (!candidate.numbers) return false;
+          const candidateNormalized = candidate.numbers.replace(/[\s→ー]/g, "-");
+          const structuredNumbers = Array.isArray(ticket.numbers)
+            ? ticket.numbers.join("-")
+            : String(ticket.numbers ?? "");
+          return candidateNormalized === structuredNumbers;
+        });
+
+        const numbers = (() => {
+          const structuredNumbers: any = (ticket as any)?.numbers;
+          if (Array.isArray(structuredNumbers) && structuredNumbers.length) {
+            return structuredNumbers.join("-");
+          }
+          if (typeof structuredNumbers === "string" && structuredNumbers.trim()) {
+            return structuredNumbers.replace(/[→ー]/g, "-");
+          }
+          if (typeof structuredNumbers === "number") {
+            return String(structuredNumbers);
+          }
+          if (baseFallback?.numbers) {
+            return baseFallback.numbers;
+          }
+          return "";
+        })();
+
+        const amount = (() => {
+          const structuredAmount: any = (ticket as any)?.amount;
+          if (typeof structuredAmount === "number" && structuredAmount > 0) {
+            return structuredAmount;
+          }
+          if (typeof structuredAmount === "string" && structuredAmount.trim()) {
+            const parsed = parseInt(structuredAmount.replace(/,/g, ""), 10);
+            if (!Number.isNaN(parsed) && parsed > 0) {
+              return parsed;
+            }
+          }
+          if (baseFallback?.amount) {
+            return baseFallback.amount;
+          }
+          return 0;
+        })();
+
+        const type = normalizeBetType(ticket?.type ?? baseFallback?.type ?? "");
+
+        if (!numbers || amount <= 0 || !type) {
+          return baseFallback ?? null;
+        }
+
         return { type, numbers, amount };
       })
       .filter((ticket): ticket is { type: string; numbers: string; amount: number } => Boolean(ticket));
 
-    if (!merged.bets.length) {
-      merged.bets = [...base.bets];
+    if (structuredBets.length) {
+      merged.bets = structuredBets;
     }
   }
 
