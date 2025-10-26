@@ -2,9 +2,8 @@ config.js
 sample.png
 .env
 .env.*
-.env.local
-.env.production
-.env.development
-.env.test
-.serena/
+*.env
+**/.env
+**/.env.*
+**/*.env
 .well-known/
