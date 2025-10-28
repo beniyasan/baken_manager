@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { BetsProvider, useBetsContext } from "@/features/bets/components/BetsProvider";
@@ -51,6 +52,7 @@ const INPUT_CLASSES =
   "w-full rounded-lg border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isResetModalOpen, setResetModalOpen] = useState(false);
@@ -112,11 +114,12 @@ export default function DashboardPage() {
       if (error) {
         throw error;
       }
+      router.push("/");
     } catch (error) {
       console.error("ログアウトエラー", error);
       showToast("ログアウトに失敗しました", "error");
     }
-  }, [showToast]);
+  }, [router, showToast]);
 
   const handleAuthSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
