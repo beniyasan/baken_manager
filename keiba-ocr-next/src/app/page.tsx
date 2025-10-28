@@ -1,555 +1,217 @@
-"use client";
+import Link from "next/link";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import type { User } from "@supabase/supabase-js";
-import { supabaseClient } from "@/lib/supabaseClient";
-import { BetsProvider, useBetsContext } from "@/features/bets/components/BetsProvider";
-import { BetsList } from "@/features/bets/components/BetsList";
-import { BetsForm } from "@/features/bets/components/BetsForm";
-import { BetsStats } from "@/features/bets/components/BetsStats";
-import { Header } from "@/components/Header";
-import type { BetRecord } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
-
-const AUTH_HINTS:
-  | Record<
-      "sign-in" | "sign-up",
-      {
-        title: string;
-        description: string;
-        submit: string;
-        note: string;
-        switchLabel: string;
-        resetVisible: boolean;
-      }
-    > = {
-  "sign-in": {
-    title: "ログイン",
-    description: "登録済みのメールアドレスとパスワードを入力してください。",
-    submit: "ログイン",
-    note: "パスワードをお忘れの場合は再設定リンクをご利用ください。",
-    switchLabel: "新規登録はこちら",
-    resetVisible: true,
+const features = [
+  {
+    title: "AI OCRで馬券管理を自動化",
+    description:
+      "紙の馬券を撮影してアップロードするだけで、AIが買い目や払戻金を読み取りデータベースに整理します。",
   },
-  "sign-up": {
-    title: "新規登録",
-    description: "登録に使用するメールアドレスとパスワードを入力してください。",
-    submit: "登録する",
-    note: "登録後、確認メールが送信されます。リンクからアカウントを有効化してください。",
-    switchLabel: "ログインはこちら",
-    resetVisible: false,
+  {
+    title: "リアルタイムな収支分析",
+    description:
+      "購入額や回収率を自動集計し、競馬場・券種ごとの傾向をグラフで確認できます。",
   },
-};
+  {
+    title: "チームで共有",
+    description:
+      "クラウド上のダッシュボードで仲間と戦略を共有。いつでもどこでも最新の情報にアクセス可能です。",
+  },
+];
 
-type ToastState = {
-  message: string;
-  type: "success" | "error" | "info";
-};
+const flowSteps = [
+  {
+    title: "馬券を撮影",
+    description: "スマホで撮影した画像をそのままアップロードします。",
+  },
+  {
+    title: "AIが自動解析",
+    description: "OCRとLLMが買い目・払戻・メモを認識し、候補を提案します。",
+  },
+  {
+    title: "ダッシュボードで分析",
+    description: "蓄積されたデータをもとに回収率やトレンドを可視化します。",
+  },
+];
 
-export default function HomePage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-  const [isResetModalOpen, setResetModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
-  const [authLoading, setAuthLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
-
-  const authCopy = useMemo(() => AUTH_HINTS[authMode], [authMode]);
-
-  const showToast = useCallback((message: string, type: ToastState["type"] = "info") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadSession = async () => {
-      try {
-        const { data, error } = await supabaseClient.auth.getSession();
-        if (error) {
-          console.error("セッション取得エラー", error);
-          return;
-        }
-        if (active) {
-          setCurrentUser(data.session?.user ?? null);
-        }
-      } catch (err) {
-        console.error("セッション確認中にエラー", err);
-      }
-    };
-
-    loadSession();
-
-    const { data: subscription } = supabaseClient.auth.onAuthStateChange((event, session) => {
-      const nextUser = session?.user ?? null;
-      setCurrentUser(nextUser);
-
-      if (event === "SIGNED_IN" && nextUser) {
-        showToast("ログインしました", "success");
-        setAuthModalOpen(false);
-      } else if (event === "SIGNED_OUT") {
-        showToast("ログアウトしました", "info");
-      } else if (event === "USER_UPDATED") {
-        showToast("プロフィールを更新しました", "success");
-      }
-    });
-
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, [showToast]);
-
-  const handleSignOut = useCallback(async () => {
-    try {
-      const { error } = await supabaseClient.auth.signOut();
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error("ログアウトエラー", error);
-      showToast("ログアウトに失敗しました", "error");
-    }
-  }, [showToast]);
-
-  const handleAuthSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      const form = event.currentTarget;
-      const formData = new FormData(form);
-      const email = String(formData.get("email") || "").trim();
-      const password = String(formData.get("password") || "");
-      const displayName = String(formData.get("displayName") || "").trim();
-      const passwordConfirm = String(formData.get("passwordConfirm") || "");
-
-      if (!email || !password) {
-        showToast("メールアドレスとパスワードを入力してください", "error");
-        return;
-      }
-
-      if (authMode === "sign-up" && password.length < 6) {
-        showToast("パスワードは6文字以上にしてください", "error");
-        return;
-      }
-
-      if (authMode === "sign-up" && password !== passwordConfirm) {
-        showToast("パスワードが一致しません", "error");
-        return;
-      }
-
-      setAuthLoading(true);
-
-      try {
-        if (authMode === "sign-in") {
-          const { error } = await supabaseClient.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (error) throw error;
-          form.reset();
-          setAuthModalOpen(false);
-        } else {
-          const redirectOrigin =
-            typeof window !== "undefined" && window.location.origin.startsWith("http")
-              ? window.location.origin
-              : undefined;
-
-          const { data, error } = await supabaseClient.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                display_name: displayName || null,
-              },
-              emailRedirectTo: redirectOrigin,
-            },
-          });
-
-          if (error) throw error;
-
-          if (data.session?.user) {
-            showToast("登録が完了しました", "success");
-          } else {
-            showToast("確認メールを送信しました。メールをご確認ください。", "info");
-          }
-          form.reset();
-          setAuthModalOpen(false);
-          setAuthMode("sign-in");
-        }
-      } catch (error: any) {
-        console.error("認証処理エラー", error);
-        showToast(error?.message || "認証に失敗しました", "error");
-      } finally {
-        setAuthLoading(false);
-      }
-    },
-    [authMode, showToast]
-  );
-
-  const handleResetSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const formData = new FormData(form);
-      const email = String(formData.get("resetEmail") || "").trim();
-
-      if (!email) {
-        showToast("メールアドレスを入力してください", "error");
-        return;
-      }
-
-      setResetLoading(true);
-      try {
-        const redirectOrigin =
-          typeof window !== "undefined" && window.location.origin.startsWith("http")
-            ? window.location.origin
-            : undefined;
-
-        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-          redirectTo: redirectOrigin,
-        });
-        if (error) throw error;
-
-        showToast("再設定メールを送信しました。メールをご確認ください。", "info");
-        form.reset();
-        setResetModalOpen(false);
-      } catch (error: any) {
-        console.error("パスワード再設定エラー", error);
-        showToast(error?.message || "再設定メールの送信に失敗しました", "error");
-      } finally {
-        setResetLoading(false);
-      }
-    },
-    [showToast]
-  );
-
-  const openAuthModal = useCallback((mode: "sign-in" | "sign-up") => {
-    setAuthMode(mode);
-    setResetModalOpen(false);
-    setAuthModalOpen(true);
-  }, []);
-
-  const GuardContent = currentUser ? (
-    <BetsProvider>
-      <DashboardArea onSignOut={handleSignOut} />
-    </BetsProvider>
-  ) : (
-    <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-white/50 bg-white/50 p-10 text-center shadow-xl shadow-slate-900/5">
-      <h2 className="text-2xl font-semibold text-slate-900">ログインが必要です</h2>
-      <p className="max-w-md text-sm text-slate-600">
-        ログインすると馬券データの管理・統計機能をご利用いただけます。未登録の方は新規登録をお願いします。
-      </p>
-      <div className="flex flex-col items-center gap-3">
-        <button
-          onClick={() => openAuthModal("sign-in")}
-          className="w-48 rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-slate-700"
-        >
-          ログインする
-        </button>
-        <button
-          onClick={() => openAuthModal("sign-up")}
-          className="w-48 rounded-full border border-slate-200 bg-white/80 px-5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
-        >
-          新規登録
-        </button>
-      </div>
-    </div>
-  );
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen text-slate-900">
-      <Header user={currentUser} onLogin={() => openAuthModal("sign-in")} onLogout={handleSignOut} />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">ステータス</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                現在のログイン状況とOCRの概要。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <CloudArrowUpIcon className="h-10 w-10 text-slate-400" />
-              <div>
-                <p className="font-semibold text-slate-700">OCR & Supabase 連携</p>
-                <p>{currentUser ? currentUser.email : "未ログイン"}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">OCR解析</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                画像アップロードから自動で入力を支援します。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <BuildingStorefrontIcon className="h-10 w-10 text-indigo-400" />
-              <div>
-                <p className="font-semibold text-slate-700">Vision API + Perplexity で補助解析</p>
-                <p>買い目や払戻も自動抽出します。</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">統計と可視化</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                月別推移や競馬場別の傾向をリアルタイム更新。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <TrophyIcon className="h-10 w-10 text-emerald-400" />
-              <div>
-                <p className="font-semibold text-slate-700">モダンなチャートで動向を把握</p>
-                <p>購入元別の回収率なども即時確認。</p>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen bg-slate-950 text-white">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/80 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-wide text-white">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300">KM</span>
+            Keiba OCR Manager
+          </Link>
+          <nav className="hidden items-center gap-6 text-sm font-medium text-slate-200 md:flex">
+            <Link href="#features" className="transition hover:text-white">
+              機能
+            </Link>
+            <Link href="#flow" className="transition hover:text-white">
+              利用の流れ
+            </Link>
+            <Link href="#cta" className="transition hover:text-white">
+              料金・導入
+            </Link>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="hidden rounded-full border border-emerald-500/40 px-5 py-2 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200 md:inline-flex"
+            >
+              デモを見る
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-lg transition hover:bg-emerald-300"
+            >
+              無料で始める
+            </Link>
+          </div>
         </div>
+      </header>
 
-        {GuardContent}
-      </main>
-
-      {isAuthModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/30 bg-white/90 p-8 shadow-2xl">
-            <h3 className="text-2xl font-semibold text-slate-900">{authCopy.title}</h3>
-            <p className="mt-2 text-sm text-slate-600">{authCopy.description}</p>
-
-            <form className="mt-6 space-y-4" onSubmit={handleAuthSubmit}>
-              {authMode === "sign-up" && (
-                <div className="space-y-1">
-                  <label htmlFor="displayName" className="text-sm font-medium text-slate-700">
-                    表示名（任意）
-                  </label>
-                  <input
-                    id="displayName"
-                    name="displayName"
-                    type="text"
-                    autoComplete="name"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label htmlFor="email" className="text-sm font-medium text-slate-700">
-                  メールアドレス
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor="password" className="text-sm font-medium text-slate-700">
-                  パスワード
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete={authMode === "sign-in" ? "current-password" : "new-password"}
-                  required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-
-              {authMode === "sign-up" && (
-                <div className="space-y-1">
-                  <label htmlFor="passwordConfirm" className="text-sm font-medium text-slate-700">
-                    パスワード確認
-                  </label>
-                  <input
-                    id="passwordConfirm"
-                    name="passwordConfirm"
-                    type="password"
-                    required
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </div>
-              )}
-
-              <p className="text-xs text-slate-500">{authCopy.note}</p>
-
-              <div className="flex flex-col gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {authLoading ? "処理中..." : authCopy.submit}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthModalOpen(false)}
-                  className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                  キャンセル
-                </button>
-              </div>
-            </form>
-
-            <div className="mt-4 flex flex-col items-center gap-2 text-sm">
-              <button
-                type="button"
-                onClick={() => setAuthMode((prev) => (prev === "sign-in" ? "sign-up" : "sign-in"))}
-                className="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-6 py-16">
+        <section id="hero" className="grid items-center gap-12 md:grid-cols-[1.2fr,0.8fr]">
+          <div className="space-y-6">
+            <p className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+              AI Powered OCR
+            </p>
+            <h1 className="text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl">
+              AI OCRで馬券管理を自動化し、収支改善のヒントを逃さない。
+            </h1>
+            <p className="text-lg text-slate-200">
+              Keiba OCR Managerは、撮影した馬券を自動でデータ化し、収支とトレンドをリアルタイムに可視化するダッシュボードです。
+              面倒な入力作業から解放され、分析と戦略立案に集中できます。
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/dashboard"
+                className="rounded-full bg-emerald-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-xl transition hover:bg-emerald-300"
               >
-                {authCopy.switchLabel}
-              </button>
-              {authCopy.resetVisible && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthModalOpen(false);
-                    setResetModalOpen(true);
-                  }}
-                  className="text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline"
-                >
-                  パスワードをお忘れの方
-                </button>
-              )}
+                ダッシュボードを試す
+              </Link>
+              <Link
+                href="#features"
+                className="rounded-full border border-white/20 px-6 py-3 text-base font-semibold text-white transition hover:border-white/40"
+              >
+                機能を見る
+              </Link>
             </div>
           </div>
-        </div>
-      )}
+          <div className="hidden h-full rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-950 p-8 shadow-2xl md:block">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-200">Dashboard Highlights</h2>
+                <p className="mt-2 text-sm text-slate-200">
+                  自動集計された回収率、競馬場別傾向、買い目ヒートマップなど、分析に役立つ指標をひと目で確認。
+                </p>
+              </div>
+              <ul className="space-y-4 text-sm text-slate-200">
+                <li className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/10 text-emerald-200">1</span>
+                  画像から買い目・オッズ・払戻を抽出
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/10 text-emerald-200">2</span>
+                  買い目候補を確認してワンクリック登録
+                </li>
+                <li className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/10 text-emerald-200">3</span>
+                  リアルタイム更新のチャートで分析
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
-      {isResetModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/30 bg-white/90 p-8 shadow-2xl">
-            <h3 className="text-2xl font-semibold text-slate-900">パスワード再設定</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              登録済みのメールアドレスを入力すると、パスワード再設定用のリンクをお送りします。
+        <section id="features" className="space-y-12">
+          <div className="space-y-4 text-center">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">主な機能</h2>
+            <p className="text-lg text-slate-200">
+              AI OCRとデータ可視化の組み合わせで、これまでにないスピードで馬券管理を自動化します。
             </p>
-
-            <form className="mt-6 space-y-4" onSubmit={handleResetSubmit}>
-              <div className="space-y-1">
-                <label htmlFor="resetEmail" className="text-sm font-medium text-slate-700">
-                  メールアドレス
-                </label>
-                <input
-                  id="resetEmail"
-                  name="resetEmail"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-
-              <div className="flex flex-col gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={resetLoading}
-                  className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {resetLoading ? "送信中..." : "送信する"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetModalOpen(false);
-                    setAuthModalOpen(true);
-                    setAuthMode("sign-in");
-                  }}
-                  className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                  戻る
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+          <div className="grid gap-6 md:grid-cols-3">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-3xl border border-white/10 bg-white/5 p-8 text-left shadow-lg shadow-black/20"
+              >
+                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-200">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      {toast && (
-        <div
-          className={`fixed bottom-6 left-1/2 z-50 w-full max-w-xs -translate-x-1/2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg transition ${
-            toast.type === "success"
-              ? "bg-emerald-500"
-              : toast.type === "error"
-              ? "bg-rose-500"
-              : "bg-slate-700"
-          }`}
+        <section id="flow" className="space-y-12">
+          <div className="space-y-4 text-center">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">3ステップの利用フロー</h2>
+            <p className="text-lg text-slate-200">
+              アプリの利用はたったの3ステップ。初めての方でも迷わずデータ化まで進めます。
+            </p>
+          </div>
+          <ol className="grid gap-6 md:grid-cols-3">
+            {flowSteps.map((step, index) => (
+              <li
+                key={step.title}
+                className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 text-left"
+              >
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-400/20 text-xl font-semibold text-emerald-200">
+                  {index + 1}
+                </span>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
+                  <p className="text-sm leading-relaxed text-slate-200">{step.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section
+          id="cta"
+          className="rounded-3xl border border-emerald-400/20 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-slate-900 p-12 text-center shadow-2xl"
         >
-          {toast.message}
+          <div className="mx-auto max-w-2xl space-y-6">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">今すぐ自動化された馬券管理を体験</h2>
+            <p className="text-lg text-slate-100">
+              SupabaseとAI OCRを組み合わせたダッシュボードで、馬券管理の手間をゼロに。無料プランで今すぐ始められます。
+            </p>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                href="/dashboard"
+                className="rounded-full bg-white px-6 py-3 text-base font-semibold text-slate-950 shadow-xl transition hover:bg-slate-100"
+              >
+                無料アカウントを作成
+              </Link>
+              <Link
+                href="/dashboard"
+                className="rounded-full border border-white/30 px-6 py-3 text-base font-semibold text-white transition hover:border-white/50"
+              >
+                ダッシュボードを見る
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-white/10 bg-slate-950/80">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-center text-xs text-slate-400 md:flex-row md:text-left">
+          <span>© {new Date().getFullYear()} Keiba OCR Manager. All rights reserved.</span>
+          <div className="flex gap-4">
+            <Link href="#features" className="hover:text-white">
+              機能
+            </Link>
+            <Link href="#flow" className="hover:text-white">
+              利用の流れ
+            </Link>
+            <Link href="/dashboard" className="hover:text-white">
+              はじめる
+            </Link>
+          </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function DashboardArea({ onSignOut }: { onSignOut: () => void }) {
-  const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
-  const [showForm, setShowForm] = useState(true);
-  const { deleteBet, fetchBets } = useBetsContext();
-
-  const handleEdit = (bet: BetRecord) => {
-    setEditingBet(bet);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (bet: BetRecord) => {
-    if (!confirm("このデータを削除してもよろしいですか？")) return;
-    try {
-      await deleteBet(bet.id, bet.imagePath);
-    } catch (error) {
-      console.error("削除エラー", error);
-      alert("削除に失敗しました");
-    }
-  };
-
-  const handleSuccess = async () => {
-    setEditingBet(null);
-    setShowForm(false);
-    await fetchBets();
-  };
-
-  return (
-    <div className="flex min-h-[320px] flex-col gap-6">
-      <Card className="bg-white/90 shadow-lg shadow-slate-500/10">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl text-slate-800">馬券データダッシュボード</CardTitle>
-            <CardDescription className="text-sm">
-              Supabase に保存された馬券データを管理します。フォームで追加・編集・削除ができます。
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={onSignOut}
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-            >
-              ログアウト
-            </button>
-            <button
-              onClick={() => setShowForm((prev) => !prev)}
-              className="rounded-full border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-            >
-              {showForm ? "フォームを隠す" : "フォームを表示"}
-            </button>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {showForm && (
-        <BetsForm editingBet={editingBet} onCancelEdit={() => setEditingBet(null)} onSuccess={handleSuccess} />
-      )}
-
-      <BetsStats />
-
-      <BetsList onEdit={handleEdit} onDelete={handleDelete} />
+      </footer>
     </div>
   );
 }
