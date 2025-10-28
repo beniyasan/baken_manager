@@ -3,382 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>馬券回収率管理アプリ</title>
+    <title>馬券回収率管理アプリ | Baken Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="app-container">
-        <div class="auth-bar">
-            <div class="auth-status">
-                <span id="auth-user-email" class="auth-user-email">未ログイン</span>
-                <div class="auth-buttons">
-                    <button id="sign-in-button" class="btn btn-secondary btn-sm">ログイン</button>
-                    <button id="sign-up-button" class="btn btn-outline btn-sm">新規登録</button>
-                    <button id="sign-out-button" class="btn btn-secondary btn-sm" style="display: none;">ログアウト</button>
-                </div>
+<body class="landing-page">
+    <header class="landing-header">
+        <div class="container">
+            <div class="branding">
+                <span class="logo-mark">BM</span>
+                <span class="brand-name">Baken Manager</span>
             </div>
+            <nav class="landing-nav">
+                <a href="#features">機能</a>
+                <a href="#flow">利用の流れ</a>
+                <a href="#cta">料金・導入</a>
+                <a class="btn btn-gold" href="dashboard.html">ログイン</a>
+            </nav>
         </div>
+    </header>
 
-        <div id="auth-guard" class="auth-guard" style="display: none;">
-            <h2 class="auth-guard-title">ログインが必要です</h2>
-            <p class="auth-guard-message">ログインすると馬券データの管理・統計機能をご利用いただけます。</p>
-            <button id="auth-guard-login-button" class="btn btn-primary">ログインする</button>
-        </div>
-
-        <div id="app-content" style="display: none;">
-        <!-- ナビゲーション -->
-        <nav class="nav-tabs">
-            <button class="nav-tab active" data-view="list">データ一覧</button>
-            <button class="nav-tab" data-view="input">新規追加</button>
-            <button class="nav-tab" data-view="stats">統計・グラフ</button>
-        </nav>
-
-        <!-- データ一覧画面 -->
-        <div id="list-view" class="view active">
-            <div class="view-header">
-                <h1>馬券データ一覧</h1>
-                <button class="btn btn-primary" onclick="showView('input')">新規追加</button>
-            </div>
-            
-            <div class="data-table-container">
-                <table id="data-table" class="data-table">
-                    <thead>
-                        <tr>
-                            <th>画像</th>
-                            <th>日付</th>
-                            <th>ソース</th>
-                            <th>購入金額</th>
-                            <th>点数</th>
-                            <th>払戻金</th>
-                            <th>回収率</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-table-body">
-                        <!-- データが動的に挿入される -->
-                    </tbody>
-                </table>
-                <div id="no-data-message" class="no-data" style="display: none;">
-                    <p>データがありません</p>
-                    <button class="btn btn-primary" onclick="showView('input')">データを追加してください</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- データ入力画面 -->
-        <div id="input-view" class="view">
-            <div class="view-header">
-                <h1 id="input-title">新規データ追加</h1>
-                <button class="btn btn-secondary" onclick="cancelEdit()">戻る</button>
-            </div>
-            
-            <div class="input-form-container">
-                <!-- 画像入力エリア -->
-                <div class="image-input-section">
-                    <h3>画像をここに追加</h3>
-                    <div class="guidance-hint">
-                        <p>ヒント: Ctrl+V または Cmd+V で画像を貼り付けられます</p>
+    <main>
+        <section class="hero">
+            <div class="container hero-content">
+                <div class="hero-text">
+                    <p class="eyebrow">馬券データを賢く管理するためのオールインワンプラットフォーム</p>
+                    <h1>深掘り分析で回収率を最大化。</h1>
+                    <p class="hero-subtitle">Baken Managerは画像取り込み・自動集計・グラフ分析をワンストップで提供。日々の購入履歴から勝ちパターンを見つけ出します。</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="dashboard.html">無料で始める</a>
+                        <a class="btn btn-outline" href="#features">詳しく見る</a>
                     </div>
-                    
-                    <!-- 画像ドロップゾーン -->
-                    <div id="image-drop-zone" class="image-drop-zone">
-                        <div class="drop-zone-content">
-                            <div class="drop-zone-text">
-                                <p class="main-text">画像をここに追加</p>
-                                <p class="sub-text">Ctrl+V または Cmd+V で貼り付け</p>
-                                <p class="sub-text">ドラッグ&amp;ドロップ</p>
-                                <p class="sub-text">クリックしてファイルを選択</p>
-                            </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-card">
+                        <h3>リアルタイム回収率</h3>
+                        <p>月間回収率 <span class="accent">132%</span></p>
+                        <p>的中率 <span class="accent">41%</span></p>
+                        <div class="mini-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="section features">
+            <div class="container">
+                <h2>馬券管理のための充実した機能</h2>
+                <p class="section-intro">入力から分析まで、馬券管理に必要な流れをすべて自動化。日々の変化を可視化し、次の一手を導き出します。</p>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>画像読み取り</h3>
+                        <p>馬券画像を貼り付けるだけでOCRが内容を抽出。手入力の手間を大幅に削減します。</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>統計ダッシュボード</h3>
+                        <p>購入元・競馬場・時期別など自由にフィルタリング。利益が出るパターンを瞬時に把握。</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>クラウド同期</h3>
+                        <p>Supabase連携でデータは自動保存。デバイスを問わず最新の成績を確認できます。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="flow" class="section flow">
+            <div class="container">
+                <h2>利用の流れ</h2>
+                <ol class="flow-steps">
+                    <li>
+                        <span class="step-number">1</span>
+                        <div>
+                            <h3>アカウント登録</h3>
+                            <p>メールアドレスだけでOK。すぐに管理を始められます。</p>
                         </div>
-                        <input type="file" id="image-file-input" accept="image/*" capture="environment" class="visually-hidden-file-input">
-                    </div>
-                    
-                    <!-- 画像プレビューエリア -->
-                    <div id="image-preview-container" class="image-preview-container" style="display: none;">
-                        <div class="image-preview">
-                            <img id="preview-image" alt="プレビュー">
+                    </li>
+                    <li>
+                        <span class="step-number">2</span>
+                        <div>
+                            <h3>馬券を取り込み</h3>
+                            <p>画像アップロードまたは貼り付けで自動解析。購入金額や的中データを記録。</p>
                         </div>
-                        <div class="image-actions">
-                            <button type="button" class="btn btn-secondary btn-sm" id="change-image-btn">別の画像に変更</button>
-                            <button type="button" class="btn btn-danger btn-sm" id="remove-image-btn">この画像を削除</button>
+                    </li>
+                    <li>
+                        <span class="step-number">3</span>
+                        <div>
+                            <h3>統計をチェック</h3>
+                            <p>グラフ分析で成績を可視化。改善ポイントを見つけて次の馬券購入に活かしましょう。</p>
                         </div>
-                    </div>
-
-                    <!-- デバッグログ表示 -->
-                    <div id="ocr-debug-log" class="debug-log" aria-live="polite"></div>
-                </div>
-
-                <form id="bet-form" class="bet-form">
-                    <div class="form-group">
-                        <label for="bet-date">日付 *</label>
-                        <input type="date" id="bet-date" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="bet-source">購入元 *</label>
-                        <select id="bet-source" required>
-                            <option value="">選択してください</option>
-                            <option value="即pat">即pat</option>
-                            <option value="Spat4">Spat4</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="race-name">レース名</label>
-                        <input type="text" id="race-name" placeholder="例: 東京11R 天皇賞">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="track-select">競馬場</label>
-                        <select id="track-select">
-                            <option value="">選択してください</option>
-                            <optgroup label="中央競馬 (JRA)">
-                                <option value="札幌">札幌</option>
-                                <option value="函館">函館</option>
-                                <option value="福島">福島</option>
-                                <option value="新潟">新潟</option>
-                                <option value="東京">東京</option>
-                                <option value="中山">中山</option>
-                                <option value="中京">中京</option>
-                                <option value="京都">京都</option>
-                                <option value="阪神">阪神</option>
-                                <option value="小倉">小倉</option>
-                            </optgroup>
-                            <optgroup label="地方競馬">
-                                <option value="門別">門別</option>
-                                <option value="盛岡">盛岡</option>
-                                <option value="水沢">水沢</option>
-                                <option value="浦和">浦和</option>
-                                <option value="船橋">船橋</option>
-                                <option value="大井">大井</option>
-                                <option value="川崎">川崎</option>
-                                <option value="金沢">金沢</option>
-                                <option value="笠松">笠松</option>
-                                <!-- value must match the label for downstream logic -->
-                                <option value="名古屋">名古屋</option>
-                                <option value="園田">園田</option>
-                                <option value="姫路">姫路</option>
-                                <option value="高知">高知</option>
-                                <option value="佐賀">佐賀</option>
-                                <option value="帯広">帯広</option>
-                            </optgroup>
-                            <option value="その他">その他</option>
-                        </select>
-                    </div>
-
-                    <!-- 買い目入力セクション -->
-                    <div class="bet-inputs-section">
-                        <h3>買い目入力</h3>
-                        <p class="bet-inputs-hint">例: 単勝 1番 500円</p>
-                        
-                        <div id="bet-inputs-container">
-                            <!-- 買い目の行が動的に追加される -->
-                        </div>
-                        
-                        <button type="button" id="add-bet-button" class="btn btn-success btn-sm">
-                            買い目を追加
-                        </button>
-                    </div>
-
-                    <!-- 合計金額表示 -->
-                    <div class="total-amount-display">
-                        <div class="total-label">合計購入金額</div>
-                        <div id="total-amount" class="total-value">¥0</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="payout">払戻金 *</label>
-                        <input type="number" id="payout" min="0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="memo">メモ</label>
-                        <textarea id="memo" rows="3" placeholder="コメントなど"></textarea>
-                    </div>
-
-                    <div class="recovery-rate-display">
-                        <div class="rate-label">回収率</div>
-                        <div id="recovery-rate" class="rate-value">0.0%</div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="cancelEdit()">キャンセル</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
-                    </div>
-                </form>
+                    </li>
+                </ol>
             </div>
-        </div>
+        </section>
 
-        <!-- 統計・グラフ画面 -->
-        <div id="stats-view" class="view">
-            <div class="view-header">
-                <h1>統計・グラフ</h1>
-                <div class="period-selector">
-                    <button class="btn btn-outline active" data-period="thisMonth">今月</button>
-                    <button class="btn btn-outline" data-period="thisYear">今年</button>
-                    <button class="btn btn-outline" data-period="all">全期間</button>
-                </div>
-            </div>
-
-            <div class="stats-toolbar">
-                <div class="filter-group">
-                    <label for="source-filter">購入元</label>
-                    <select id="source-filter">
-                        <option value="all">すべて</option>
-                        <option value="Spat4">Spat4</option>
-                        <option value="即pat">即pat</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="track-filter">競馬場</label>
-                    <select id="track-filter">
-                        <option value="all">すべて</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>集計単位</label>
-                    <div class="button-toggle" id="group-toggle">
-                        <button class="btn btn-outline active" data-group="monthly">月別</button>
-                        <button class="btn btn-outline" data-group="yearly">年別</button>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label>比較軸</label>
-                    <div class="button-toggle" id="comparison-toggle">
-                        <button class="btn btn-outline active" data-comparison="source">購入元</button>
-                        <button class="btn btn-outline" data-comparison="track">競馬場</button>
+        <section id="cta" class="section final-cta">
+            <div class="container">
+                <div class="cta-card">
+                    <h2>今すぐBaken Managerで回収率を底上げ</h2>
+                    <p>無料プランから利用開始。プレミアム機能でさらに詳細な分析や履歴管理を強化できます。</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="dashboard.html">管理画面にログイン</a>
+                        <a class="btn btn-outline" href="mailto:info@example.com">導入相談</a>
                     </div>
                 </div>
             </div>
+        </section>
+    </main>
 
-            <div class="stats-container">
-                <!-- 統計サマリー -->
-                <div class="stats-summary">
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-purchase">¥0</div>
-                        <div class="stat-label">総購入金額</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-payout">¥0</div>
-                        <div class="stat-label">総払戻金額</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="avg-recovery-rate">0.0%</div>
-                        <div class="stat-label">平均回収率</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="race-count">0</div>
-                        <div class="stat-label">レース数</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="hit-count">0</div>
-                        <div class="stat-label">的中回数</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="hit-rate">0.0%</div>
-                        <div class="stat-label">的中率</div>
-                    </div>
-                </div>
-
-                <!-- 月別回収率グラフ -->
-                <div class="chart-container">
-                    <h3 id="recovery-chart-title">月別回収率推移</h3>
-                    <canvas id="recovery-chart" width="800" height="400"></canvas>
-                </div>
-
-                <!-- 比較グラフ -->
-                <div class="chart-container">
-                    <h3 id="comparison-chart-title">購入元別回収率比較</h3>
-                    <canvas id="comparison-chart" width="400" height="300"></canvas>
-                </div>
-            </div>
+    <footer class="landing-footer">
+        <div class="container footer-content">
+            <p>&copy; 2024 Baken Manager. All rights reserved.</p>
+            <nav>
+                <a href="#features">機能</a>
+                <a href="#flow">利用の流れ</a>
+                <a href="#cta">お問い合わせ</a>
+            </nav>
         </div>
-    </div>
-    </div>
-
-    <!-- 認証モーダル -->
-    <div id="auth-modal" class="modal" style="display: none;">
-        <div class="modal-content auth-modal">
-            <h3 id="auth-modal-title">ログイン</h3>
-            <form id="auth-form">
-                <div class="form-group" id="auth-display-name-group" style="display: none;">
-                    <label for="auth-display-name">表示名（任意）</label>
-                    <input type="text" id="auth-display-name" autocomplete="name">
-                </div>
-                <div class="form-group">
-                    <label for="auth-email">メールアドレス</label>
-                    <input type="email" id="auth-email" required>
-                </div>
-                <div class="form-group">
-                    <label for="auth-password">パスワード</label>
-                    <input type="password" id="auth-password" required autocomplete="current-password">
-                </div>
-                <div class="form-group" id="auth-confirm-password-group" style="display: none;">
-                    <label for="auth-password-confirm">パスワード確認</label>
-                    <input type="password" id="auth-password-confirm" autocomplete="new-password">
-                </div>
-                <p class="auth-hint" id="auth-hint">Supabaseで作成したアカウント情報を入力してください。</p>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" id="auth-cancel-button">キャンセル</button>
-                    <button type="submit" class="btn btn-primary" id="auth-submit-button">ログイン</button>
-                </div>
-            </form>
-            <div class="auth-switch">
-                <button type="button" class="btn-link" id="auth-switch-button">新規登録はこちら</button>
-                <button type="button" class="btn-link" id="auth-reset-link">パスワードをお忘れの方</button>
-            </div>
-            <p class="auth-note" id="auth-note">登録済みのメールアドレスとパスワードを入力してください。</p>
-        </div>
-    </div>
-
-    <!-- パスワード再設定モーダル -->
-    <div id="reset-modal" class="modal" style="display: none;">
-        <div class="modal-content auth-modal">
-            <h3>パスワード再設定</h3>
-            <form id="reset-form">
-                <p class="auth-description">登録済みのメールアドレスを入力すると、パスワード再設定用のリンクをお送りします。</p>
-                <div class="form-group">
-                    <label for="reset-email">メールアドレス</label>
-                    <input type="email" id="reset-email" required autocomplete="email">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" id="reset-cancel-button">戻る</button>
-                    <button type="submit" class="btn btn-primary" id="reset-submit-button">送信する</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 削除確認モーダル -->
-    <div id="delete-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>削除確認</h3>
-            <p>このデータを削除してもよろしいですか？</p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="hideDeleteModal()">キャンセル</button>
-                <button class="btn btn-danger" onclick="confirmDelete()">削除</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 画像拡大表示モーダル -->
-    <div id="image-modal" class="modal" style="display: none;">
-        <div class="image-modal-content">
-            <button class="modal-close" onclick="hideImageModal()">&times;</button>
-            <img id="modal-image" alt="拡大表示">
-        </div>
-    </div>
-
-    <!-- トースト通知 -->
-    <div id="toast" class="toast" style="display: none;"></div>
-
-    <!-- 設定ファイル（APIキーなど） -->
-    <script src="config.js"></script>
-
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="libs/supabaseClient.js"></script>
-
-    <script src="app.js"></script>
+    </footer>
 </body>
 </html>
