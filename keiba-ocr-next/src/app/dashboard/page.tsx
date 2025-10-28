@@ -452,6 +452,18 @@ export default function DashboardPage() {
               <div>
                 <p className="font-semibold text-white">OCR & Supabase 連携</p>
                 <p className="text-slate-300">{accountLabel}</p>
+                {planEnforced ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-emerald-200">
+                    <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 font-semibold uppercase tracking-[0.25em]">
+                      現在のプラン
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em]">
+                      {plan.label}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-400">ログインしてプラン情報を確認しましょう。</p>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -149,19 +149,27 @@ export default function BetsManagementPage() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2 font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
-              >
-                ダッシュボードに戻る
-              </Link>
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
-              >
-                トップに戻る
-              </Link>
+            <div className="flex flex-col gap-4 md:items-end">
+              <div className="flex flex-col items-start gap-2 text-xs text-slate-300 md:items-end">
+                <span className="uppercase tracking-[0.3em] text-slate-400">現在のプラン</span>
+                <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                  {plan.label}
+                </span>
+              </div>
+              <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2 font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
+                >
+                  ダッシュボードに戻る
+                </Link>
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
+                >
+                  トップに戻る
+                </Link>
+              </div>
             </div>
           </div>
         </section>
