@@ -10,9 +10,9 @@ export const BetsStats = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">統計サマリー</h2>
-        <p className="mt-1 text-sm text-slate-500">主要な指標を一覧化しました。</p>
+      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-6 shadow-xl shadow-emerald-500/10">
+        <h2 className="text-lg font-semibold text-white">統計サマリー</h2>
+        <p className="mt-1 text-sm text-slate-300">主要な指標を一覧化しました。</p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard label="総購入金額" value={formatCurrency(stats.totalPurchase)} />
@@ -42,8 +42,8 @@ const StatCard = ({
   value: string;
   positive?: boolean;
 }) => (
-  <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-5 text-sm text-slate-600">
+  <div className="rounded-lg border border-white/10 bg-slate-950/40 px-4 py-5 text-sm text-slate-200">
     <p className="text-xs font-medium uppercase text-slate-400">{label}</p>
-    <p className={`mt-2 text-lg font-semibold ${positive ? "text-emerald-600" : "text-slate-900"}`}>{value}</p>
+    <p className={`mt-2 text-lg font-semibold ${positive ? "text-emerald-300" : "text-white"}`}>{value}</p>
   </div>
 );

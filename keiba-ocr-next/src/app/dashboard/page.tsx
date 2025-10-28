@@ -47,6 +47,9 @@ type ToastState = {
   type: "success" | "error" | "info";
 };
 
+const INPUT_CLASSES =
+  "w-full rounded-lg border border-white/15 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30";
+
 export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
@@ -238,21 +241,21 @@ export default function DashboardPage() {
       <DashboardArea onSignOut={handleSignOut} />
     </BetsProvider>
   ) : (
-    <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-white/50 bg-white/50 p-10 text-center shadow-xl shadow-slate-900/5">
-      <h2 className="text-2xl font-semibold text-slate-900">ログインが必要です</h2>
-      <p className="max-w-md text-sm text-slate-600">
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-white/20 bg-slate-900/60 p-10 text-center shadow-xl shadow-emerald-500/10">
+      <h2 className="text-2xl font-semibold text-white">ログインが必要です</h2>
+      <p className="max-w-md text-sm text-slate-300">
         ログインすると馬券データの管理・統計機能をご利用いただけます。未登録の方は新規登録をお願いします。
       </p>
       <div className="flex flex-col items-center gap-3">
         <button
           onClick={() => openAuthModal("sign-in")}
-          className="w-48 rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-slate-700"
+          className="w-48 rounded-full bg-emerald-400 px-5 py-2 text-sm font-medium text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
         >
           ログインする
         </button>
         <button
           onClick={() => openAuthModal("sign-up")}
-          className="w-48 rounded-full border border-slate-200 bg-white/80 px-5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+          className="w-48 rounded-full border border-white/20 bg-transparent px-5 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
         >
           新規登録
         </button>
@@ -261,52 +264,52 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen text-slate-900">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
       <Header user={currentUser} onLogin={() => openAuthModal("sign-in")} onLogout={handleSignOut} />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <div className="grid gap-6 md:grid-cols-3">
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">ステータス</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
+          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+            <CardHeader className="border-white/10">
+              <CardTitle className="text-base font-semibold text-emerald-200">ステータス</CardTitle>
+              <CardDescription className="text-xs text-slate-300">
                 現在のログイン状況とOCRの概要。
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <CloudArrowUpIcon className="h-10 w-10 text-slate-400" />
+            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+              <CloudArrowUpIcon className="h-10 w-10 text-emerald-300" />
               <div>
-                <p className="font-semibold text-slate-700">OCR & Supabase 連携</p>
-                <p>{currentUser ? currentUser.email : "未ログイン"}</p>
+                <p className="font-semibold text-white">OCR & Supabase 連携</p>
+                <p className="text-slate-300">{currentUser ? currentUser.email : "未ログイン"}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">OCR解析</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
+          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+            <CardHeader className="border-white/10">
+              <CardTitle className="text-base font-semibold text-emerald-200">OCR解析</CardTitle>
+              <CardDescription className="text-xs text-slate-300">
                 画像アップロードから自動で入力を支援します。
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <BuildingStorefrontIcon className="h-10 w-10 text-indigo-400" />
+            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+              <BuildingStorefrontIcon className="h-10 w-10 text-emerald-300" />
               <div>
-                <p className="font-semibold text-slate-700">Vision API + Perplexity で補助解析</p>
-                <p>買い目や払戻も自動抽出します。</p>
+                <p className="font-semibold text-white">Vision API + Perplexity で補助解析</p>
+                <p className="text-slate-300">買い目や払戻も自動抽出します。</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/90 shadow-lg shadow-slate-500/5">
-            <CardHeader>
-              <CardTitle className="text-base text-slate-600">統計と可視化</CardTitle>
-              <CardDescription className="text-xs text-slate-500">
+          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+            <CardHeader className="border-white/10">
+              <CardTitle className="text-base font-semibold text-emerald-200">統計と可視化</CardTitle>
+              <CardDescription className="text-xs text-slate-300">
                 月別推移や競馬場別の傾向をリアルタイム更新。
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-600">
-              <TrophyIcon className="h-10 w-10 text-emerald-400" />
+            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+              <TrophyIcon className="h-10 w-10 text-emerald-300" />
               <div>
-                <p className="font-semibold text-slate-700">モダンなチャートで動向を把握</p>
-                <p>購入元別の回収率なども即時確認。</p>
+                <p className="font-semibold text-white">モダンなチャートで動向を把握</p>
+                <p className="text-slate-300">購入元別の回収率なども即時確認。</p>
               </div>
             </CardContent>
           </Card>
@@ -316,15 +319,15 @@ export default function DashboardPage() {
       </main>
 
       {isAuthModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/30 bg-white/90 p-8 shadow-2xl">
-            <h3 className="text-2xl font-semibold text-slate-900">{authCopy.title}</h3>
-            <p className="mt-2 text-sm text-slate-600">{authCopy.description}</p>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-emerald-500/20">
+            <h3 className="text-2xl font-semibold text-white">{authCopy.title}</h3>
+            <p className="mt-2 text-sm text-slate-300">{authCopy.description}</p>
 
             <form className="mt-6 space-y-4" onSubmit={handleAuthSubmit}>
               {authMode === "sign-up" && (
                 <div className="space-y-1">
-                  <label htmlFor="displayName" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="displayName" className="text-sm font-medium text-slate-200">
                     表示名（任意）
                   </label>
                   <input
@@ -332,13 +335,13 @@ export default function DashboardPage() {
                     name="displayName"
                     type="text"
                     autoComplete="name"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className={INPUT_CLASSES}
                   />
                 </div>
               )}
 
               <div className="space-y-1">
-                <label htmlFor="email" className="text-sm font-medium text-slate-700">
+                <label htmlFor="email" className="text-sm font-medium text-slate-200">
                   メールアドレス
                 </label>
                 <input
@@ -347,12 +350,12 @@ export default function DashboardPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_CLASSES}
                 />
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="password" className="text-sm font-medium text-slate-700">
+                <label htmlFor="password" className="text-sm font-medium text-slate-200">
                   パスワード
                 </label>
                 <input
@@ -361,13 +364,13 @@ export default function DashboardPage() {
                   type="password"
                   autoComplete={authMode === "sign-in" ? "current-password" : "new-password"}
                   required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_CLASSES}
                 />
               </div>
 
               {authMode === "sign-up" && (
                 <div className="space-y-1">
-                  <label htmlFor="passwordConfirm" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="passwordConfirm" className="text-sm font-medium text-slate-200">
                     パスワード確認
                   </label>
                   <input
@@ -375,25 +378,25 @@ export default function DashboardPage() {
                     name="passwordConfirm"
                     type="password"
                     required
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className={INPUT_CLASSES}
                   />
                 </div>
               )}
 
-              <p className="text-xs text-slate-500">{authCopy.note}</p>
+              <p className="text-xs text-slate-300">{authCopy.note}</p>
 
               <div className="flex flex-col gap-3 pt-2">
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="w-full rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {authLoading ? "処理中..." : authCopy.submit}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(false)}
-                  className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                  className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40"
                 >
                   キャンセル
                 </button>
@@ -404,7 +407,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setAuthMode((prev) => (prev === "sign-in" ? "sign-up" : "sign-in"))}
-                className="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
+                className="text-emerald-200 underline-offset-4 hover:text-emerald-100 hover:underline"
               >
                 {authCopy.switchLabel}
               </button>
@@ -415,7 +418,7 @@ export default function DashboardPage() {
                     setAuthModalOpen(false);
                     setResetModalOpen(true);
                   }}
-                  className="text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline"
+                  className="text-slate-300 underline-offset-4 hover:text-white hover:underline"
                 >
                   パスワードをお忘れの方
                 </button>
@@ -426,16 +429,16 @@ export default function DashboardPage() {
       )}
 
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/30 bg-white/90 p-8 shadow-2xl">
-            <h3 className="text-2xl font-semibold text-slate-900">パスワード再設定</h3>
-            <p className="mt-2 text-sm text-slate-600">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-emerald-500/20">
+            <h3 className="text-2xl font-semibold text-white">パスワード再設定</h3>
+            <p className="mt-2 text-sm text-slate-300">
               登録済みのメールアドレスを入力すると、パスワード再設定用のリンクをお送りします。
             </p>
 
             <form className="mt-6 space-y-4" onSubmit={handleResetSubmit}>
               <div className="space-y-1">
-                <label htmlFor="resetEmail" className="text-sm font-medium text-slate-700">
+                <label htmlFor="resetEmail" className="text-sm font-medium text-slate-200">
                   メールアドレス
                 </label>
                 <input
@@ -444,7 +447,7 @@ export default function DashboardPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_CLASSES}
                 />
               </div>
 
@@ -452,7 +455,7 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="w-full rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {resetLoading ? "送信中..." : "送信する"}
                 </button>
@@ -463,7 +466,7 @@ export default function DashboardPage() {
                     setAuthModalOpen(true);
                     setAuthMode("sign-in");
                   }}
-                  className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                  className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40"
                 >
                   戻る
                 </button>
@@ -518,24 +521,24 @@ function DashboardArea({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <div className="flex min-h-[320px] flex-col gap-6">
-      <Card className="bg-white/90 shadow-lg shadow-slate-500/10">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-4">
+      <Card className="border-white/10 bg-slate-900/60 shadow-xl shadow-emerald-500/10">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-white/10">
           <div>
-            <CardTitle className="text-xl text-slate-800">馬券データダッシュボード</CardTitle>
-            <CardDescription className="text-sm">
+            <CardTitle className="text-xl text-white">馬券データダッシュボード</CardTitle>
+            <CardDescription className="text-sm text-slate-300">
               Supabase に保存された馬券データを管理します。フォームで追加・編集・削除ができます。
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={onSignOut}
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+              className="rounded-full border border-white/20 bg-transparent px-4 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
             >
               ログアウト
             </button>
             <button
               onClick={() => setShowForm((prev) => !prev)}
-              className="rounded-full border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+              className="rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300"
             >
               {showForm ? "フォームを隠す" : "フォームを表示"}
             </button>
