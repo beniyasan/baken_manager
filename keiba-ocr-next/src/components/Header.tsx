@@ -7,8 +7,8 @@ export type HeaderProps = {
   user: User | null;
   onLogin: () => void;
   onLogout: () => void;
-  onOpenProfile: () => void;
-  onOpenPasswordChange: () => void;
+  onOpenProfile?: () => void;
+  onOpenPasswordChange?: () => void;
 };
 
 const getDisplayName = (user: User | null) => {
@@ -82,26 +82,30 @@ export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordC
                       <p className="truncate text-xs text-slate-400">{user.email}</p>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onOpenProfile();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
-                  >
-                    ユーザー名を変更
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onOpenPasswordChange();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
-                  >
-                    パスワードを変更
-                  </button>
+                  {onOpenProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenProfile();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      ユーザー名を変更
+                    </button>
+                  )}
+                  {onOpenPasswordChange && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenPasswordChange();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      パスワードを変更
+                    </button>
+                  )}
                   <div className="my-1 border-t border-white/10" />
                   <button
                     type="button"
