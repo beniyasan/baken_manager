@@ -57,12 +57,22 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [isResetModalOpen, setResetModalOpen] = useState(false);
+  const [isProfileModalOpen, setProfileModalOpen] = useState(false);
+  const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authLoading, setAuthLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [profileDisplayName, setProfileDisplayName] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const authCopy = useMemo(() => AUTH_HINTS[authMode], [authMode]);
+  const accountLabel = useMemo(() => {
+    if (!currentUser) return "未ログイン";
+    const nickname = String(currentUser.user_metadata?.display_name || "").trim();
+    return nickname || currentUser.email || "未ログイン";
+  }, [currentUser]);
 
   const showToast = useCallback((message: string, type: ToastState["type"] = "info") => {
     setToast({ message, type });
@@ -98,8 +108,6 @@ export default function DashboardPage() {
         setAuthModalOpen(false);
       } else if (event === "SIGNED_OUT") {
         showToast("ログアウトしました", "info");
-      } else if (event === "USER_UPDATED") {
-        showToast("プロフィールを更新しました", "success");
       }
     });
 
@@ -108,6 +116,13 @@ export default function DashboardPage() {
       subscription.subscription.unsubscribe();
     };
   }, [showToast]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setProfileModalOpen(false);
+      setPasswordModalOpen(false);
+    }
+  }, [currentUser]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -121,6 +136,15 @@ export default function DashboardPage() {
       showToast("ログアウトに失敗しました", "error");
     }
   }, [router, showToast]);
+
+  const handleOpenProfileModal = useCallback(() => {
+    setProfileDisplayName(String(currentUser?.user_metadata?.display_name || "").trim());
+    setProfileModalOpen(true);
+  }, [currentUser]);
+
+  const handleOpenPasswordModal = useCallback(() => {
+    setPasswordModalOpen(true);
+  }, []);
 
   const handleAuthSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -187,9 +211,10 @@ export default function DashboardPage() {
           setAuthModalOpen(false);
           setAuthMode("sign-in");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("認証処理エラー", error);
-        showToast(error?.message || "認証に失敗しました", "error");
+        const message = error instanceof Error ? error.message : "";
+        showToast(message || "認証に失敗しました", "error");
       } finally {
         setAuthLoading(false);
       }
@@ -224,11 +249,94 @@ export default function DashboardPage() {
         showToast("再設定メールを送信しました。メールをご確認ください。", "info");
         form.reset();
         setResetModalOpen(false);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("パスワード再設定エラー", error);
-        showToast(error?.message || "再設定メールの送信に失敗しました", "error");
+        const message = error instanceof Error ? error.message : "";
+        showToast(message || "再設定メールの送信に失敗しました", "error");
       } finally {
         setResetLoading(false);
+      }
+    },
+    [showToast]
+  );
+
+  const handleProfileSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const trimmedName = profileDisplayName.trim();
+
+      if (!trimmedName) {
+        showToast("ユーザー名を入力してください", "error");
+        return;
+      }
+
+      setProfileLoading(true);
+      try {
+        const { data, error } = await supabaseClient.auth.updateUser({
+          data: {
+            display_name: trimmedName,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          setCurrentUser(data.user);
+        }
+
+        setProfileModalOpen(false);
+        showToast("ユーザー名を更新しました", "success");
+      } catch (error: unknown) {
+        console.error("プロフィール更新エラー", error);
+        const message = error instanceof Error ? error.message : "";
+        showToast(message || "ユーザー名の更新に失敗しました", "error");
+      } finally {
+        setProfileLoading(false);
+      }
+    },
+    [profileDisplayName, showToast]
+  );
+
+  const handlePasswordChangeSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const newPassword = String(formData.get("newPassword") || "");
+      const confirmPassword = String(formData.get("confirmPassword") || "");
+
+      if (!newPassword) {
+        showToast("新しいパスワードを入力してください", "error");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast("パスワードは6文字以上にしてください", "error");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast("パスワードが一致しません", "error");
+        return;
+      }
+
+      setPasswordLoading(true);
+      try {
+        const { error } = await supabaseClient.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (error) throw error;
+
+        form.reset();
+        setPasswordModalOpen(false);
+        showToast("パスワードを更新しました", "success");
+      } catch (error: unknown) {
+        console.error("パスワード更新エラー", error);
+        const message = error instanceof Error ? error.message : "";
+        showToast(message || "パスワードの更新に失敗しました", "error");
+      } finally {
+        setPasswordLoading(false);
       }
     },
     [showToast]
@@ -269,7 +377,13 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Header user={currentUser} onLogin={() => openAuthModal("sign-in")} onLogout={handleSignOut} />
+      <Header
+        user={currentUser}
+        onLogin={() => openAuthModal("sign-in")}
+        onLogout={handleSignOut}
+        onOpenProfile={handleOpenProfileModal}
+        onOpenPasswordChange={handleOpenPasswordModal}
+      />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
@@ -283,7 +397,7 @@ export default function DashboardPage() {
               <CloudArrowUpIcon className="h-10 w-10 text-emerald-300" />
               <div>
                 <p className="font-semibold text-white">OCR & Supabase 連携</p>
-                <p className="text-slate-300">{currentUser ? currentUser.email : "未ログイン"}</p>
+                <p className="text-slate-300">{accountLabel}</p>
               </div>
             </CardContent>
           </Card>
@@ -473,6 +587,112 @@ export default function DashboardPage() {
                   className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40"
                 >
                   戻る
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-emerald-500/20">
+            <h3 className="text-2xl font-semibold text-white">ユーザー名の変更</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              ダッシュボード上に表示される名前を変更できます。メールアドレスは他のユーザーには表示されません。
+            </p>
+
+            <form className="mt-6 space-y-4" onSubmit={handleProfileSubmit}>
+              <div className="space-y-1">
+                <label htmlFor="profileDisplayName" className="text-sm font-medium text-slate-200">
+                  新しいユーザー名
+                </label>
+                <input
+                  id="profileDisplayName"
+                  name="profileDisplayName"
+                  type="text"
+                  value={profileDisplayName}
+                  onChange={(event) => setProfileDisplayName(event.target.value)}
+                  maxLength={50}
+                  className={INPUT_CLASSES}
+                  placeholder="例：競馬ファン"
+                  autoComplete="name"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="w-full rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {profileLoading ? "更新中..." : "保存する"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileModalOpen(false)}
+                  className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 px-4 backdrop-blur">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-emerald-500/20">
+            <h3 className="text-2xl font-semibold text-white">パスワードの変更</h3>
+            <p className="mt-2 text-sm text-slate-300">
+              新しいパスワードを設定してください。セキュリティ向上のため英数字を組み合わせた6文字以上のパスワードを推奨します。
+            </p>
+
+            <form className="mt-6 space-y-4" onSubmit={handlePasswordChangeSubmit}>
+              <div className="space-y-1">
+                <label htmlFor="newPassword" className="text-sm font-medium text-slate-200">
+                  新しいパスワード
+                </label>
+                <input
+                  id="newPassword"
+                  name="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  className={INPUT_CLASSES}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-200">
+                  パスワード確認
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  className={INPUT_CLASSES}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="w-full rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {passwordLoading ? "更新中..." : "保存する"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasswordModalOpen(false)}
+                  className="w-full rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40"
+                >
+                  キャンセル
                 </button>
               </div>
             </form>

@@ -1,14 +1,42 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 
 export type HeaderProps = {
   user: User | null;
   onLogin: () => void;
   onLogout: () => void;
+  onOpenProfile?: () => void;
+  onOpenPasswordChange?: () => void;
 };
 
-export const Header = ({ user, onLogin, onLogout }: HeaderProps) => {
+const getDisplayName = (user: User | null) => {
+  if (!user) return "未ログイン";
+  const nickname = String(user.user_metadata?.display_name || "").trim();
+  return nickname || user.email || "未ログイン";
+};
+
+export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordChange }: HeaderProps) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const displayName = getDisplayName(user);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
+
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 text-white">
@@ -24,15 +52,74 @@ export const Header = ({ user, onLogin, onLogout }: HeaderProps) => {
         <div className="flex items-center gap-4">
           <div className="hidden flex-col text-right text-slate-300 md:flex">
             <span className="text-xs uppercase tracking-wide text-slate-400">アカウント</span>
-            <span className="text-sm font-medium text-white">{user ? user.email : "未ログイン"}</span>
+            <span className="text-sm font-medium text-white">{displayName}</span>
           </div>
           {user ? (
-            <button
-              onClick={onLogout}
-              className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:bg-white/20"
-            >
-              ログアウト
-            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:bg-white/20"
+              >
+                <span className="hidden sm:inline">{displayName}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className={`h-4 w-4 transition-transform ${menuOpen ? "rotate-180" : "rotate-0"}`}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-slate-900/95 p-2 text-sm text-slate-200 shadow-lg">
+                  <div className="px-3 pb-2 pt-1">
+                    <p className="text-xs uppercase tracking-wide text-slate-400">ログイン中</p>
+                    <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                    {user.email && (
+                      <p className="truncate text-xs text-slate-400">{user.email}</p>
+                    )}
+                  </div>
+                  {onOpenProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenProfile();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      ユーザー名を変更
+                    </button>
+                  )}
+                  {onOpenPasswordChange && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenPasswordChange();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      パスワードを変更
+                    </button>
+                  )}
+                  <div className="my-1 border-t border-white/10" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+                  >
+                    ログアウト
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               onClick={onLogin}
