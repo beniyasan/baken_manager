@@ -7,6 +7,7 @@ let currentImageData = null; // 現在選択されている画像データ
 let betData = []; // すべての馬券データを保存する配列
 let betInputCounter = 0; // 買い目入力行のカウンター
 let currentUser = null; // Supabase 認証済みユーザー
+let currentProfile = null; // Supabase profiles 拡張情報
 let authStateSubscription = null;
 let betDataLoaded = false;
 let authMode = 'sign-in';
@@ -27,6 +28,39 @@ const trackOptions = [
     '門別', '盛岡', '水沢', '浦和', '船橋', '大井', '川崎', '金沢', '笠松', '名古屋',
     '園田', '姫路', '高知', '佐賀', '帯広'
 ];
+
+const PLAN_FEATURES = {
+    free: {
+        label: 'フリープラン',
+        maxBets: 200,
+        ocrEnabled: false,
+        aiAssistEnabled: false
+    },
+    premium: {
+        label: 'プレミアムプラン',
+        maxBets: null,
+        ocrEnabled: true,
+        aiAssistEnabled: true
+    },
+    admin: {
+        label: '管理者',
+        maxBets: null,
+        ocrEnabled: true,
+        aiAssistEnabled: true
+    },
+    local: {
+        label: 'ローカルモード',
+        maxBets: null,
+        ocrEnabled: true,
+        aiAssistEnabled: true
+    }
+};
+
+const FEATURE_MESSAGES = {
+    ocrEnabled: '画像のOCR解析はプレミアムプラン限定の機能です。',
+    aiAssistEnabled: 'AIによる買い目補助はプレミアムプラン限定の機能です。',
+    maxBets: (limit) => `保存できる馬券データはフリープランでは${limit}件までです。`
+};
 
 const VISION_API_ENDPOINT = 'https://vision.googleapis.com/v1/images:annotate';
 const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
@@ -61,6 +95,162 @@ function clearDebugLog() {
     const logContainer = document.getElementById('ocr-debug-log');
     if (logContainer) {
         logContainer.innerHTML = '';
+    }
+}
+
+function resolvePlan(role) {
+    if (!window.supabaseClient) {
+        return PLAN_FEATURES.local;
+    }
+    const normalizedRole = role && PLAN_FEATURES[role] ? role : 'free';
+    return PLAN_FEATURES[normalizedRole] || PLAN_FEATURES.free;
+}
+
+function getCurrentPlan() {
+    if (currentProfile && currentProfile.plan) {
+        return currentProfile.plan;
+    }
+    if (!window.supabaseClient) {
+        return PLAN_FEATURES.local;
+    }
+    return PLAN_FEATURES.free;
+}
+
+function isPlanEnforced() {
+    return Boolean(window.supabaseClient && currentUser);
+}
+
+function normalizeProfile(profileInput) {
+    if (!window.supabaseClient) {
+        return {
+            id: profileInput?.id || null,
+            displayName: profileInput?.display_name || profileInput?.displayName || '',
+            userRole: 'local',
+            plan: PLAN_FEATURES.local
+        };
+    }
+
+    if (!profileInput) {
+        return {
+            id: currentUser?.id || null,
+            displayName: '',
+            userRole: 'free',
+            plan: PLAN_FEATURES.free
+        };
+    }
+
+    const rawRole = profileInput.user_role ?? profileInput.userRole ?? 'free';
+    const normalizedRole = PLAN_FEATURES[rawRole] ? rawRole : 'free';
+    const displayName = profileInput.display_name
+        ?? profileInput.displayName
+        ?? profileInput.full_name
+        ?? '';
+
+    return {
+        id: profileInput.id ?? currentUser?.id ?? null,
+        displayName,
+        userRole: normalizedRole,
+        plan: resolvePlan(normalizedRole)
+    };
+}
+
+function createDefaultProfile(user) {
+    if (!user) {
+        return null;
+    }
+    return {
+        id: user.id,
+        display_name: user.user_metadata?.display_name || user.email || '',
+        user_role: 'free'
+    };
+}
+
+function getFeatureMessage(featureKey, context) {
+    const message = FEATURE_MESSAGES[featureKey];
+    if (typeof message === 'function') {
+        return message(context);
+    }
+    return message;
+}
+
+function setCurrentProfile(profileInput) {
+    currentProfile = normalizeProfile(profileInput);
+    renderPlanStatus();
+}
+
+function renderPlanStatus() {
+    const planBadge = document.getElementById('auth-user-plan');
+    const upgradeButton = document.getElementById('upgrade-plan-button');
+    const plan = getCurrentPlan();
+    const isAuthenticated = Boolean(currentUser);
+
+    if (planBadge) {
+        if (!isAuthenticated && window.supabaseClient) {
+            planBadge.style.display = 'none';
+        } else {
+            planBadge.textContent = plan.label;
+            planBadge.style.display = 'inline-flex';
+            planBadge.dataset.plan = currentProfile?.userRole || (window.supabaseClient ? 'free' : 'local');
+        }
+    }
+
+    if (upgradeButton) {
+        const shouldShowUpgrade = Boolean(currentUser) && currentProfile?.userRole === 'free';
+        upgradeButton.style.display = shouldShowUpgrade ? 'inline-flex' : 'none';
+    }
+
+    updateFeatureAccessUI();
+}
+
+function updateFeatureAccessUI() {
+    const dropZone = document.getElementById('image-drop-zone');
+    const fileInput = document.getElementById('image-file-input');
+    const ocrNotice = document.getElementById('ocr-plan-notice');
+    const shouldDisableOcr = isPlanEnforced() && !isFeatureEnabled('ocrEnabled');
+
+    if (dropZone) {
+        dropZone.classList.toggle('feature-disabled', shouldDisableOcr);
+        dropZone.setAttribute('aria-disabled', shouldDisableOcr ? 'true' : 'false');
+    }
+
+    if (fileInput) {
+        fileInput.disabled = shouldDisableOcr;
+    }
+
+    if (ocrNotice) {
+        ocrNotice.style.display = shouldDisableOcr ? 'block' : 'none';
+    }
+}
+
+function isFeatureEnabled(featureKey) {
+    if (!isPlanEnforced()) {
+        return true;
+    }
+    const plan = getCurrentPlan();
+    if (!plan || !(featureKey in plan)) {
+        return true;
+    }
+    const value = plan[featureKey];
+    return value === null || value === undefined ? true : Boolean(value);
+}
+
+function showPlanUpsell(featureKey) {
+    if (!currentUser) {
+        return;
+    }
+
+    const upgradeButton = document.getElementById('upgrade-plan-button');
+    if (upgradeButton && currentProfile?.userRole === 'free') {
+        upgradeButton.style.display = 'inline-flex';
+        upgradeButton.classList.add('highlight');
+        setTimeout(() => upgradeButton.classList.remove('highlight'), 1500);
+    }
+
+    if (featureKey === 'ocrEnabled') {
+        const ocrNotice = document.getElementById('ocr-plan-notice');
+        if (ocrNotice) {
+            ocrNotice.style.display = 'block';
+        }
     }
 }
 
@@ -259,15 +449,24 @@ function updateAuthUI(user) {
         signUpButton.style.display = user ? 'none' : 'inline-flex';
     }
 
+    renderPlanStatus();
     setAppAccess(Boolean(user));
 }
 
 function setCurrentUser(user) {
     currentUser = user;
+    if (user) {
+        setCurrentProfile(createDefaultProfile(user));
+    } else {
+        setCurrentProfile(null);
+    }
     updateAuthUI(user);
     if (user) {
         hideAuthModal();
         betDataLoaded = false;
+        refreshCurrentProfile(user).catch((error) => {
+            console.error('プロフィール情報の取得に失敗しました:', error);
+        });
         loadDataList()
             .then(() => loadStats())
             .catch((error) => {
@@ -280,6 +479,30 @@ function setCurrentUser(user) {
         loadDataList()
             .then(() => loadStats())
             .catch(() => {});
+    }
+}
+
+async function refreshCurrentProfile(user) {
+    if (!window.supabaseClient || !user) {
+        return;
+    }
+
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('id, display_name, user_role')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (error) {
+            throw error;
+        }
+
+        if (data) {
+            setCurrentProfile(data);
+        }
+    } catch (error) {
+        throw error;
     }
 }
 
@@ -763,7 +986,43 @@ function initSampleData() {
 }
 
 // データ操作関数
+async function ensureBetQuotaAllowsNewEntry() {
+    if (!isPlanEnforced()) {
+        return true;
+    }
+
+    const plan = getCurrentPlan();
+    if (!plan || plan.maxBets === null || plan.maxBets === undefined) {
+        return true;
+    }
+
+    if (!betDataLoaded) {
+        await getAllBets();
+    }
+
+    const currentCount = Array.isArray(betData) ? betData.length : 0;
+    if (currentCount >= plan.maxBets) {
+        const message = getFeatureMessage('maxBets', plan.maxBets);
+        if (message) {
+            showToast(message, 'warning');
+        }
+        showPlanUpsell('maxBets');
+        return false;
+    }
+
+    return true;
+}
+
 async function addBet(newBetData) {
+    if (!(await ensureBetQuotaAllowsNewEntry())) {
+        const plan = getCurrentPlan();
+        const limit = plan?.maxBets;
+        const message = getFeatureMessage('maxBets', limit) || '保存上限に達しました。';
+        const error = new Error(message);
+        error.code = 'plan_quota_reached';
+        throw error;
+    }
+
     if (!isSupabaseReady()) {
         const localId = Date.now().toString();
         newBetData.id = localId;
@@ -1123,11 +1382,15 @@ function setupForm() {
                 await addBet(formData);
                 showToast('データを追加しました', 'success');
             }
-            
+
             resetForm();
             showView('list');
             await loadStats();
         } catch (error) {
+            if (error?.code === 'plan_quota_reached') {
+                console.warn('保存上限に達しました:', error.message);
+                return;
+            }
             console.error('保存エラー:', error);
             showToast('保存に失敗しました', 'error');
         }
@@ -2228,11 +2491,17 @@ async function extractDataFromText(text) {
   });
   let aiTickets = [];
   if (window.PERPLEXITY_API_KEY) {
-    try {
-      aiTickets = await requestPerplexityTickets(workText);
-      debugLog('AI抽出結果', aiTickets);
-    } catch (error) {
-      debugLog('AI抽出エラー', error?.message || error);
+    if (isPlanEnforced() && !isFeatureEnabled('aiAssistEnabled')) {
+      debugLog('AI補助は現在のプランでは利用できません');
+      showToast(getFeatureMessage('aiAssistEnabled'), 'info');
+      showPlanUpsell('aiAssistEnabled');
+    } else {
+      try {
+        aiTickets = await requestPerplexityTickets(workText);
+        debugLog('AI抽出結果', aiTickets);
+      } catch (error) {
+        debugLog('AI抽出エラー', error?.message || error);
+      }
     }
   } else {
     debugLog('Perplexity APIキーが設定されていません');
@@ -2495,6 +2764,12 @@ document.addEventListener('DOMContentLoaded', function() {
     debugLog('=== 新しい画像を処理します ===');
     debugLog('画像処理開始', { name: file.name, type: file.type, sizeKB: (file.size / 1024).toFixed(1) });
 
+    if (isPlanEnforced() && !isFeatureEnabled('ocrEnabled')) {
+      showToast(getFeatureMessage('ocrEnabled'), 'warning');
+      showPlanUpsell('ocrEnabled');
+      return;
+    }
+
     // ファイルタイプチェック
     if (!file.type.startsWith('image/')) {
       debugLog('画像ファイルではありません', file.type);
@@ -2552,6 +2827,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  updateFeatureAccessUI();
   debugLog('画像入力機能の初期化完了');
 
   // 画像削除ボタン

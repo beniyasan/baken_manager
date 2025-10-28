@@ -20,8 +20,12 @@
             <div class="app-container">
         <div class="auth-bar">
             <div class="auth-status">
-                <span id="auth-user-email" class="auth-user-email">未ログイン</span>
+                <div class="auth-identity">
+                    <span id="auth-user-email" class="auth-user-email">未ログイン</span>
+                    <span id="auth-user-plan" class="plan-badge" style="display: none;">フリープラン</span>
+                </div>
                 <div class="auth-buttons">
+                    <a id="upgrade-plan-button" class="btn btn-upgrade btn-sm" href="#pricing-section" style="display: none;">アップグレード</a>
                     <button id="sign-in-button" class="btn btn-secondary btn-sm">ログイン</button>
                     <button id="sign-up-button" class="btn btn-outline btn-sm">新規登録</button>
                     <button id="sign-out-button" class="btn btn-secondary btn-sm" style="display: none;">ログアウト</button>
@@ -89,7 +93,13 @@
                     <div class="guidance-hint">
                         <p>ヒント: Ctrl+V または Cmd+V で画像を貼り付けられます</p>
                     </div>
-                    
+
+                    <div id="ocr-plan-notice" class="plan-notice" style="display: none;" aria-live="polite">
+                        <strong>OCR解析はプレミアム限定機能です。</strong>
+                        <p>アップグレードすると画像からの自動入力が利用できます。</p>
+                        <a href="#pricing-section" class="plan-notice-link">プランを確認する</a>
+                    </div>
+
                     <!-- 画像ドロップゾーン -->
                     <div id="image-drop-zone" class="image-drop-zone">
                         <div class="drop-zone-content">
