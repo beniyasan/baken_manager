@@ -7,6 +7,8 @@ import { useBetsContext } from "./BetsProvider";
 import { mergeOcrResults, parseOcrText } from "../utils/ocr";
 import { uploadBetImage, removeBetImage } from "../utils/storage";
 import { supabaseClient } from "@/lib/supabaseClient";
+import type { PlanFeatures } from "@/lib/plans";
+import { FEATURE_MESSAGES } from "@/lib/plans";
 
 const BET_TYPES = [
   "単勝",
@@ -92,10 +94,12 @@ export type BetsFormProps = {
   editingBet: BetRecord | null;
   onCancelEdit: () => void;
   onSuccess: () => void;
+  plan: PlanFeatures;
+  planEnforced: boolean;
 };
 
-export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps) => {
-  const { addBet, updateBet } = useBetsContext();
+export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforced }: BetsFormProps) => {
+  const { addBet, updateBet, bets } = useBetsContext();
 
   const [date, setDate] = useState<string>(today());
   const [source, setSource] = useState<string>("");
@@ -234,6 +238,20 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
     if (isDragging) setIsDragging(false);
   };
 
+  const planLimitNotice = useMemo(() => {
+    if (!planEnforced || plan.maxBets === null) return null;
+    const count = bets.length;
+    const limit = plan.maxBets;
+    return `登録済み件数: ${Math.min(count, limit)}/${limit}`;
+  }, [bets.length, plan.maxBets, planEnforced]);
+
+  const limitReached = useMemo(() => {
+    if (!planEnforced || plan.maxBets === null) return false;
+    return !editingBet && bets.length >= plan.maxBets;
+  }, [bets.length, plan.maxBets, planEnforced, editingBet]);
+
+  const ocrDisabled = planEnforced && !plan.ocrEnabled;
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -244,6 +262,11 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
 
     if (!tickets.some((ticket) => ticket.type && ticket.numbers && ticket.amount > 0)) {
       setError("最低1つの買い目を入力してください");
+      return;
+    }
+
+    if (limitReached && plan.maxBets !== null) {
+      setError(FEATURE_MESSAGES.maxBets(plan.maxBets));
       return;
     }
 
@@ -332,6 +355,11 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
   };
 
   const handleRunOcr = async () => {
+    if (ocrDisabled) {
+      setError(FEATURE_MESSAGES.ocrDisabled);
+      return;
+    }
+
     setError(null);
     setOcrLoading(true);
     try {
@@ -604,12 +632,27 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           )}
           <button
             type="button"
-          onClick={handleRunOcr}
-          disabled={ocrLoading}
+            onClick={handleRunOcr}
+            disabled={ocrLoading || ocrDisabled}
             className={`${PRIMARY_BUTTON_CLASS} mt-4 inline-flex items-center px-5 py-2 text-xs`}
           >
             {ocrLoading ? "解析中..." : "OCRで自動入力"}
           </button>
+          {ocrDisabled && (
+            <div className="mt-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+              <p>{FEATURE_MESSAGES.ocrDisabled}</p>
+              {plan.upgradeUrl && (
+                <a
+                  href={plan.upgradeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-flex text-amber-200 underline decoration-dotted underline-offset-4 hover:text-amber-100"
+                >
+                  アップグレードの詳細を見る
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -619,8 +662,35 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
         </div>
       )}
 
+      {planLimitNotice && (
+        <div
+          className={`mt-6 rounded-md border px-3 py-2 text-xs ${
+            limitReached
+              ? "border-rose-400/40 bg-rose-500/10 text-rose-100"
+              : "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+          }`}
+        >
+          <p>{planLimitNotice}</p>
+          {limitReached && plan.maxBets !== null && (
+            <p className="mt-1">
+              {FEATURE_MESSAGES.maxBets(plan.maxBets)}
+              {plan.upgradeUrl && (
+                <a
+                  href={plan.upgradeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-2 text-emerald-200 underline decoration-dotted underline-offset-4 hover:text-emerald-100"
+                >
+                  アップグレードはこちら
+                </a>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="submit" disabled={loading} className={PRIMARY_BUTTON_CLASS}>
+        <button type="submit" disabled={loading || limitReached} className={PRIMARY_BUTTON_CLASS}>
           {loading ? "保存中..." : "保存"}
         </button>
         <button type="button" onClick={resetForm} className={SECONDARY_BUTTON_CLASS}>

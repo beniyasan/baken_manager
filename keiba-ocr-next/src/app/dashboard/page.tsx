@@ -13,6 +13,7 @@ import { Header } from "@/components/Header";
 import type { BetRecord } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import { type CurrentProfile, type PlanFeatures, getAccountLabel, normalizeProfile, resolvePlan } from "@/lib/plans";
 
 const AUTH_HINTS:
   | Record<
@@ -66,13 +67,15 @@ export default function DashboardPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<CurrentProfile | null>(null);
+  const plan = useMemo<PlanFeatures>(() => resolvePlan(currentProfile?.userRole ?? null), [currentProfile?.userRole]);
+  const planEnforced = Boolean(currentUser);
 
   const authCopy = useMemo(() => AUTH_HINTS[authMode], [authMode]);
-  const accountLabel = useMemo(() => {
-    if (!currentUser) return "未ログイン";
-    const nickname = String(currentUser.user_metadata?.display_name || "").trim();
-    return nickname || currentUser.email || "未ログイン";
-  }, [currentUser]);
+  const accountLabel = useMemo(
+    () => getAccountLabel(currentProfile, currentUser),
+    [currentProfile, currentUser],
+  );
 
   const showToast = useCallback((message: string, type: ToastState["type"] = "info") => {
     setToast({ message, type });
@@ -118,6 +121,46 @@ export default function DashboardPage() {
   }, [showToast]);
 
   useEffect(() => {
+    let active = true;
+
+    const loadProfile = async (user: User) => {
+      try {
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select("id, display_name, user_role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!active) return;
+
+        if (error) {
+          throw error;
+        }
+
+        setCurrentProfile(normalizeProfile(user, data));
+      } catch (profileError) {
+        console.error("プロフィール取得エラー", profileError);
+        if (active) {
+          setCurrentProfile(normalizeProfile(user, null));
+        }
+      }
+    };
+
+    if (!currentUser) {
+      setCurrentProfile(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    loadProfile(currentUser);
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
     if (!currentUser) {
       setProfileModalOpen(false);
       setPasswordModalOpen(false);
@@ -138,9 +181,9 @@ export default function DashboardPage() {
   }, [router, showToast]);
 
   const handleOpenProfileModal = useCallback(() => {
-    setProfileDisplayName(String(currentUser?.user_metadata?.display_name || "").trim());
+    setProfileDisplayName(accountLabel);
     setProfileModalOpen(true);
-  }, [currentUser]);
+  }, [accountLabel]);
 
   const handleOpenPasswordModal = useCallback(() => {
     setPasswordModalOpen(true);
@@ -280,8 +323,17 @@ export default function DashboardPage() {
 
         if (error) throw error;
 
-        if (data.user) {
-          setCurrentUser(data.user);
+        const updatedUser = data.user ?? currentUser;
+        if (updatedUser) {
+          setCurrentUser(updatedUser);
+          await supabaseClient
+            .from("profiles")
+            .update({ display_name: trimmedName })
+            .eq("id", updatedUser.id)
+            .throwOnError();
+          setCurrentProfile((prev) =>
+            prev ? { ...prev, displayName: trimmedName } : normalizeProfile(updatedUser, null),
+          );
         }
 
         setProfileModalOpen(false);
@@ -294,7 +346,7 @@ export default function DashboardPage() {
         setProfileLoading(false);
       }
     },
-    [profileDisplayName, showToast]
+    [currentUser, profileDisplayName, showToast]
   );
 
   const handlePasswordChangeSubmit = useCallback(
@@ -350,7 +402,7 @@ export default function DashboardPage() {
 
   const GuardContent = currentUser ? (
     <BetsProvider>
-      <DashboardArea onSignOut={handleSignOut} />
+      <DashboardArea onSignOut={handleSignOut} plan={plan} planEnforced={planEnforced} />
     </BetsProvider>
   ) : (
     <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-white/20 bg-slate-900/60 p-10 text-center shadow-xl shadow-emerald-500/10">
@@ -379,6 +431,8 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <Header
         user={currentUser}
+        accountName={accountLabel}
+        plan={planEnforced ? plan : undefined}
         onLogin={() => openAuthModal("sign-in")}
         onLogout={handleSignOut}
         onOpenProfile={handleOpenProfileModal}
@@ -717,7 +771,13 @@ export default function DashboardPage() {
   );
 }
 
-function DashboardArea({ onSignOut }: { onSignOut: () => void }) {
+type DashboardAreaProps = {
+  onSignOut: () => void;
+  plan: PlanFeatures;
+  planEnforced: boolean;
+};
+
+function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [showForm, setShowForm] = useState(true);
   const { deleteBet, fetchBets } = useBetsContext();
@@ -768,10 +828,41 @@ function DashboardArea({ onSignOut }: { onSignOut: () => void }) {
             </button>
           </div>
         </CardHeader>
+        {planEnforced && (
+          <CardContent className="border-t border-white/10">
+            <div className="flex flex-col gap-3 text-sm text-slate-300 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                  {plan.label}
+                </span>
+                <span>
+                  登録上限: {plan.maxBets !== null ? `${plan.maxBets}件` : "無制限"}
+                </span>
+                <span>OCR: {plan.ocrEnabled ? "利用可" : "利用不可"}</span>
+              </div>
+              {!plan.ocrEnabled && plan.upgradeUrl && (
+                <a
+                  href={plan.upgradeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-full border border-emerald-300/40 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:border-emerald-200 hover:text-emerald-100"
+                >
+                  プレミアムにアップグレード
+                </a>
+              )}
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {showForm && (
-        <BetsForm editingBet={editingBet} onCancelEdit={() => setEditingBet(null)} onSuccess={handleSuccess} />
+        <BetsForm
+          editingBet={editingBet}
+          onCancelEdit={() => setEditingBet(null)}
+          onSuccess={handleSuccess}
+          plan={plan}
+          planEnforced={planEnforced}
+        />
       )}
 
       <BetsStats />

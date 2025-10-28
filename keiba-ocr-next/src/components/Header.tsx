@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import type { PlanFeatures } from "@/lib/plans";
 
 export type HeaderProps = {
   user: User | null;
+  accountName?: string;
+  plan?: PlanFeatures;
   onLogin: () => void;
   onLogout: () => void;
   onOpenProfile?: () => void;
@@ -17,10 +20,19 @@ const getDisplayName = (user: User | null) => {
   return nickname || user.email || "未ログイン";
 };
 
-export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordChange }: HeaderProps) => {
+export const Header = ({
+  user,
+  accountName,
+  plan,
+  onLogin,
+  onLogout,
+  onOpenProfile,
+  onOpenPasswordChange,
+}: HeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const displayName = getDisplayName(user);
+  const displayName = accountName ?? getDisplayName(user);
+  const isFreePlan = plan?.role === "free";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -53,6 +65,11 @@ export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordC
           <div className="hidden flex-col text-right text-slate-300 md:flex">
             <span className="text-xs uppercase tracking-wide text-slate-400">アカウント</span>
             <span className="text-sm font-medium text-white">{displayName}</span>
+            {user && plan && (
+              <span className="mt-1 inline-flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.25em] text-emerald-300">
+                {plan.label}
+              </span>
+            )}
           </div>
           {user ? (
             <div className="relative" ref={menuRef}>
@@ -81,6 +98,9 @@ export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordC
                     {user.email && (
                       <p className="truncate text-xs text-slate-400">{user.email}</p>
                     )}
+                    {plan && (
+                      <p className="mt-1 text-xs text-emerald-200">{plan.label}</p>
+                    )}
                   </div>
                   {onOpenProfile && (
                     <button
@@ -105,6 +125,16 @@ export const Header = ({ user, onLogin, onLogout, onOpenProfile, onOpenPasswordC
                     >
                       パスワードを変更
                     </button>
+                  )}
+                  {isFreePlan && plan?.upgradeUrl && (
+                    <a
+                      href={plan.upgradeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-emerald-200 hover:bg-white/10"
+                    >
+                      プレミアムにアップグレード
+                    </a>
                   )}
                   <div className="my-1 border-t border-white/10" />
                   <button

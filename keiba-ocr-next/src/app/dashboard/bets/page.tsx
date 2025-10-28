@@ -8,11 +8,14 @@ import { Header } from "@/components/Header";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { BetsProvider } from "@/features/bets/components/BetsProvider";
 import { BetsTable } from "@/features/bets/components/BetsTable";
+import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
 
 export default function BetsManagementPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountName, setAccountName] = useState("未ログイン");
+  const [plan, setPlan] = useState<PlanFeatures>(resolvePlan(null));
 
   useEffect(() => {
     let active = true;
@@ -28,18 +31,51 @@ export default function BetsManagementPage() {
         setUser(nextUser);
 
         if (!nextUser) {
+          setAccountName("未ログイン");
+          setPlan(resolvePlan(null));
           router.replace("/dashboard");
+          return;
         }
+
+        await loadProfile(nextUser);
       } catch (error) {
         console.error("馬券管理ページのセッション取得エラー", error);
         if (active) {
           setUser(null);
+          setAccountName("未ログイン");
+          setPlan(resolvePlan(null));
           router.replace("/dashboard");
         }
       } finally {
         if (active) {
           setLoading(false);
         }
+      }
+    };
+
+    const loadProfile = async (targetUser: User) => {
+      try {
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select("id, display_name, user_role")
+          .eq("id", targetUser.id)
+          .maybeSingle();
+
+        if (!active) return;
+
+        if (error) {
+          throw error;
+        }
+
+        const normalized = normalizeProfile(targetUser, data);
+        setAccountName(getAccountLabel(normalized, targetUser));
+        setPlan(resolvePlan(normalized?.userRole ?? null));
+      } catch (profileError) {
+        console.error("馬券管理ページのプロフィール取得エラー", profileError);
+        if (!active) return;
+        const fallback = normalizeProfile(targetUser, null);
+        setAccountName(getAccountLabel(fallback, targetUser));
+        setPlan(resolvePlan(fallback?.userRole ?? null));
       }
     };
 
@@ -52,7 +88,11 @@ export default function BetsManagementPage() {
       setUser(nextUser);
 
       if (!nextUser) {
+        setAccountName("未ログイン");
+        setPlan(resolvePlan(null));
         router.replace("/dashboard");
+      } else {
+        loadProfile(nextUser);
       }
     });
 
@@ -88,7 +128,13 @@ export default function BetsManagementPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Header user={user} onLogin={() => router.push("/dashboard")} onLogout={handleSignOut} />
+      <Header
+        user={user}
+        accountName={accountName}
+        plan={user ? plan : undefined}
+        onLogin={() => router.push("/dashboard")}
+        onLogout={handleSignOut}
+      />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <section className="rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-xl shadow-emerald-500/10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
