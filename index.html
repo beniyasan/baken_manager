@@ -7,7 +7,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
+    <header class="info-header">
+        <nav class="info-nav" aria-label="サイト内ナビゲーション">
+            <a href="#app-section" class="info-nav-link" id="nav-app">アプリ</a>
+            <a href="#flow-section" class="info-nav-link" id="nav-flow">利用フロー</a>
+            <a href="#pricing-section" class="info-nav-link" id="nav-pricing">利用料金</a>
+        </nav>
+    </header>
+
+    <main class="site-main">
+        <section id="app-section" class="primary-section" aria-labelledby="nav-app">
+            <div class="app-container">
         <div class="auth-bar">
             <div class="auth-status">
                 <span id="auth-user-email" class="auth-user-email">未ログイン</span>
@@ -293,8 +303,59 @@
                 </div>
             </div>
         </div>
-    </div>
-    </div>
+        </div>
+            </div>
+        </section>
+
+        <section id="flow-section" class="info-section" aria-labelledby="nav-flow">
+            <div class="info-section-inner">
+                <h2 class="info-section-title">利用フロー</h2>
+                <p class="info-section-subtitle">スマートフォンからでも簡単に、撮影から登録までスムーズに進められます。</p>
+                <div class="info-cards flow-cards">
+                    <article class="info-card" id="flow-step-capture">
+                        <h3 class="info-card-title">1. 撮影</h3>
+                        <p class="info-card-body">馬券をカメラで撮影し、画像をアプリにアップロードします。スマートフォンのブラウザからそのまま操作できます。</p>
+                    </article>
+                    <article class="info-card" id="flow-step-ai">
+                        <h3 class="info-card-title">2. AI解析</h3>
+                        <p class="info-card-body">アップロードされた画像はAIがOCR解析を行い、購入情報を自動で読み取ります。誤りがあっても手動で修正可能です。</p>
+                    </article>
+                    <article class="info-card" id="flow-step-register">
+                        <h3 class="info-card-title">3. 登録・分析</h3>
+                        <p class="info-card-body">解析結果を確認したら登録ボタンをタップ。統計画面で回収率や購入傾向をすぐに確認できます。</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="pricing-section" class="info-section" aria-labelledby="nav-pricing">
+            <div class="info-section-inner">
+                <h2 class="info-section-title">利用料金</h2>
+                <p class="info-section-subtitle">ご利用頻度に合わせてプランを選べます。まずは無料でお試しください。</p>
+                <div class="plan-grid">
+                    <article class="plan-card" id="plan-free">
+                        <h3 class="plan-name">フリープラン</h3>
+                        <p class="plan-price">¥0<span class="plan-price-note">/月</span></p>
+                        <ul class="plan-features">
+                            <li>月10回までOCR解析</li>
+                            <li>手動登録は無制限</li>
+                            <li>統計・グラフ機能利用可</li>
+                        </ul>
+                    </article>
+                    <article class="plan-card plan-card-premium" id="plan-premium">
+                        <h3 class="plan-name">プレミアムプラン</h3>
+                        <p class="plan-price">¥480<span class="plan-price-note">/月</span></p>
+                        <ul class="plan-features">
+                            <li>OCR解析が無制限</li>
+                            <li>優先サポート対応</li>
+                            <li>分析レポートを毎月配信</li>
+                        </ul>
+                        <a href="https://example.com/premium" class="btn btn-primary plan-cta" id="premium-plan-button" target="_blank" rel="noopener">プレミアムに申し込む</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <!-- 認証モーダル -->
     <div id="auth-modal" class="modal" style="display: none;">
