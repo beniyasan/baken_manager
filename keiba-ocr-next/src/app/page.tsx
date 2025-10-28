@@ -33,6 +33,33 @@ const flowSteps = [
   },
 ];
 
+const pricingPlans = [
+  {
+    name: "フリープラン",
+    price: "¥0 / 月",
+    description: "まずは気軽に試したい個人ユーザー向け。",
+    ocrLimit: "月10回までのOCR解析",
+    manualEntry: "自動登録以外の項目は手動登録で対応",
+    buttonLabel: "無料で始める",
+    buttonHref: "/dashboard",
+  },
+  {
+    name: "プレミアムプラン",
+    price: "¥480 / 月",
+    description: "本格的にデータ分析を行いたいヘビーユーザーに最適。",
+    ocrLimit: "OCR解析が無制限",
+    manualEntry: "すべての登録を自動化し手間を最小限に",
+    buttonLabel: "プレミアムにアップグレード",
+    buttonHref: "/dashboard",
+  },
+];
+
+const commonFeatures = [
+  "撮影した馬券のAI OCR解析",
+  "Supabaseベースの安全なデータ保管",
+  "回収率・傾向を把握できるダッシュボード",
+];
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -49,7 +76,7 @@ export default function LandingPage() {
             <Link href="#flow" className="transition hover:text-white">
               利用の流れ
             </Link>
-            <Link href="#cta" className="transition hover:text-white">
+            <Link href="#pricing" className="transition hover:text-white">
               料金・導入
             </Link>
           </nav>
@@ -169,6 +196,69 @@ export default function LandingPage() {
           </ol>
         </section>
 
+        <section id="pricing" className="space-y-12">
+          <div className="space-y-4 text-center">
+            <h2 className="text-3xl font-bold text-white md:text-4xl">料金プラン</h2>
+            <p className="text-lg text-slate-200">
+              利用スタイルに合わせて選べる2つのプラン。まずは無料で始めて、必要に応じてアップグレードできます。
+            </p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-2">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className="flex h-full flex-col gap-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl shadow-black/20"
+              >
+                <div className="space-y-3 text-left">
+                  <span className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-200">{plan.name}</span>
+                  <p className="text-3xl font-bold text-white">{plan.price}</p>
+                  <p className="text-sm text-slate-200">{plan.description}</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-emerald-200">共通機能</h3>
+                    <ul className="mt-2 space-y-2 text-sm text-slate-100">
+                      {commonFeatures.map((feature) => (
+                        <li key={`${plan.name}-${feature}`} className="flex items-start gap-3">
+                          <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-semibold text-emerald-200">
+                            ✓
+                          </span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-emerald-200">プラン固有の制限</h3>
+                    <ul className="mt-2 space-y-2 text-sm text-slate-100">
+                      <li className="flex items-start gap-3">
+                        <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white">
+                          •
+                        </span>
+                        <span>{plan.ocrLimit}</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white">
+                          •
+                        </span>
+                        <span>{plan.manualEntry}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  <Link
+                    href={plan.buttonHref}
+                    className="inline-flex w-full items-center justify-center rounded-full bg-emerald-400 px-6 py-3 text-base font-semibold text-slate-950 shadow-lg transition hover:bg-emerald-300"
+                  >
+                    {plan.buttonLabel}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section
           id="cta"
           className="rounded-3xl border border-emerald-400/20 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-slate-900 p-12 text-center shadow-2xl"
@@ -206,8 +296,8 @@ export default function LandingPage() {
             <Link href="#flow" className="hover:text-white">
               利用の流れ
             </Link>
-            <Link href="/dashboard" className="hover:text-white">
-              はじめる
+            <Link href="#pricing" className="hover:text-white">
+              料金・導入
             </Link>
           </div>
         </div>
