@@ -1,7 +1,18 @@
--- Add user roles and supporting helpers for plan-based access control
 
 -- 1. enum type and column ------------------------------------------------------
-create type if not exists public.user_role as enum ('free', 'premium', 'admin');
+do $$
+begin
+    if not exists (
+        select 1
+          from pg_type t
+          join pg_namespace n on n.oid = t.typnamespace
+         where t.typname = 'user_role'
+           and n.nspname = 'public'
+    ) then
+        create type public.user_role as enum ('free', 'premium', 'admin');
+    end if;
+end;
+$$;
 
 alter table public.profiles
     add column if not exists user_role public.user_role not null default 'free';

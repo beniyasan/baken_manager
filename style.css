@@ -777,9 +777,17 @@ body {
     gap: 12px;
 }
 
+.auth-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
 .auth-buttons {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .auth-user-email {
@@ -790,6 +798,83 @@ body {
 .auth-user-email.is-authenticated {
     color: #2563eb;
     font-weight: 600;
+}
+
+.plan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.btn-upgrade {
+    background-color: #f59e0b;
+    color: #fff;
+    border: none;
+}
+
+.btn-upgrade:hover {
+    background-color: #d97706;
+    color: #fff;
+}
+
+.btn-upgrade.highlight {
+    animation: upgrade-pulse 1.2s ease;
+}
+
+@keyframes upgrade-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+    70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.plan-notice {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #fcd34d;
+    background-color: #fffbeb;
+    color: #92400e;
+    font-size: 13px;
+}
+
+.plan-notice strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.plan-notice-link {
+    color: #b45309;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.plan-notice-link:hover {
+    color: #92400e;
+}
+
+#image-drop-zone.feature-disabled {
+    position: relative;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#image-drop-zone.feature-disabled::after {
+    content: 'プレミアム限定';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.8);
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 16px;
 }
 
 .auth-guard {
