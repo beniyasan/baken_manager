@@ -27,33 +27,45 @@ const RACE_SOURCES = [
   { value: "Spat4", label: "SPAT4" },
 ];
 
-const TRACK_OPTIONS = [
-  "札幌",
-  "函館",
-  "福島",
-  "新潟",
-  "東京",
-  "中山",
-  "中京",
-  "京都",
-  "阪神",
-  "小倉",
-  "門別",
-  "盛岡",
-  "水沢",
-  "浦和",
-  "船橋",
-  "大井",
-  "川崎",
-  "金沢",
-  "笠松",
-  "名古屋",
-  "園田",
-  "姫路",
-  "高知",
-  "佐賀",
-  "帯広",
+const TRACK_OPTION_GROUPS = [
+  {
+    label: "中央競馬 (JRA)",
+    options: [
+      { value: "札幌", label: "札幌" },
+      { value: "函館", label: "函館" },
+      { value: "福島", label: "福島" },
+      { value: "新潟", label: "新潟" },
+      { value: "東京", label: "東京" },
+      { value: "中山", label: "中山" },
+      { value: "中京", label: "中京" },
+      { value: "京都", label: "京都" },
+      { value: "阪神", label: "阪神" },
+      { value: "小倉", label: "小倉" },
+    ],
+  },
+  {
+    label: "地方競馬",
+    options: [
+      { value: "門別", label: "門別" },
+      { value: "盛岡", label: "盛岡" },
+      { value: "水沢", label: "水沢" },
+      { value: "浦和", label: "浦和" },
+      { value: "船橋", label: "船橋" },
+      { value: "大井", label: "大井" },
+      { value: "川崎", label: "川崎" },
+      { value: "金沢", label: "金沢" },
+      { value: "笠松", label: "笠松" },
+      { value: "名古屋", label: "名古屋" },
+      { value: "園田", label: "園田" },
+      { value: "姫路", label: "姫路" },
+      { value: "高知", label: "高知" },
+      { value: "佐賀", label: "佐賀" },
+      { value: "帯広", label: "帯広" },
+    ],
+  },
 ];
+
+const TRACK_SINGLE_OPTIONS = [{ value: "その他", label: "その他" }];
 
 const defaultTicket: BetTicket = {
   type: "",
@@ -64,6 +76,17 @@ const defaultTicket: BetTicket = {
 const today = () => new Date().toISOString().split("T")[0];
 
 const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
+
+const INPUT_BASE_CLASS =
+  "w-full rounded-md border border-white/15 bg-slate-950/50 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30";
+const PRIMARY_BUTTON_CLASS =
+  "rounded-md bg-emerald-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70";
+const SECONDARY_BUTTON_CLASS =
+  "rounded-md border border-white/20 px-5 py-2 text-sm font-medium text-white transition hover:border-white/40";
+const SMALL_BUTTON_CLASS =
+  "rounded-md border border-white/20 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-60";
+const PANEL_CLASS = "rounded-lg border border-white/10 bg-slate-900/50";
+const DANGER_PANEL_CLASS = "rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200";
 
 export type BetsFormProps = {
   editingBet: BetRecord | null;
@@ -370,9 +393,12 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-2xl border border-white/10 bg-slate-900/60 p-6 shadow-xl shadow-emerald-500/10"
+    >
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-white">
           {editingBet ? "データ編集" : "新規データ追加"}
         </h2>
         {editingBet ? (
@@ -382,7 +408,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
               onCancelEdit();
               resetForm();
             }}
-            className="text-sm text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline"
+            className="text-sm text-slate-300 underline-offset-4 hover:text-white hover:underline"
           >
             編集をキャンセル
           </button>
@@ -418,7 +444,8 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           label="競馬場"
           value={track}
           onChange={(event) => setTrack(event.target.value)}
-          options={TRACK_OPTIONS.map((name) => ({ value: name, label: name }))}
+          optionGroups={TRACK_OPTION_GROUPS}
+          options={TRACK_SINGLE_OPTIONS}
           placeholder="選択してください"
         />
 
@@ -431,27 +458,26 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
         />
       </div>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className={`${PANEL_CLASS} mt-6 p-4`}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">買い目入力</h3>
-          <button
-            type="button"
-            onClick={addTicketRow}
-            className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
-          >
+          <h3 className="text-sm font-semibold text-white">買い目入力</h3>
+          <button type="button" onClick={addTicketRow} className={SMALL_BUTTON_CLASS}>
             行を追加
           </button>
         </div>
 
         <div className="mt-4 space-y-3">
           {tickets.map((ticket, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 rounded-md border border-slate-200 bg-white p-3 sm:grid-cols-4">
+            <div
+              key={index}
+              className="grid grid-cols-1 gap-3 rounded-md border border-white/15 bg-slate-950/40 p-3 sm:grid-cols-4"
+            >
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-500">券種</label>
+                <label className="text-xs font-medium text-slate-300">券種</label>
                 <select
                   value={ticket.type}
                   onChange={(event) => handleTicketChange(index, "type", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_BASE_CLASS}
                   required
                 >
                   <option value="">選択してください</option>
@@ -463,24 +489,24 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
                 </select>
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-xs font-medium text-slate-500">馬番号</label>
+                <label className="text-xs font-medium text-slate-300">馬番号</label>
                 <input
                   value={ticket.numbers}
                   onChange={(event) => handleTicketChange(index, "numbers", event.target.value)}
                   placeholder="例: 1-2-3"
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_BASE_CLASS}
                   required
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-500">購入金額</label>
+                <label className="text-xs font-medium text-slate-300">購入金額</label>
                 <input
                   type="number"
                   min={100}
                   step={100}
                   value={ticket.amount}
                   onChange={(event) => handleTicketChange(index, "amount", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className={INPUT_BASE_CLASS}
                   required
                 />
               </div>
@@ -488,7 +514,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
                 <button
                   type="button"
                   onClick={() => removeTicketRow(index)}
-                  className="text-xs text-rose-500 hover:text-rose-600"
+                  className="text-xs text-rose-300 transition hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={tickets.length <= 1}
                 >
                   削除
@@ -498,16 +524,18 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           ))}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        <div
+          className={`${PANEL_CLASS} mt-4 flex flex-wrap items-center gap-4 border-white/15 bg-slate-950/30 p-4 text-sm text-slate-200`}
+        >
           <div>
             <p className="text-xs font-medium uppercase text-slate-400">合計購入金額</p>
-            <p className="mt-1 text-base font-semibold text-slate-900">{formatCurrency(totalPurchase)}</p>
+            <p className="mt-1 text-base font-semibold text-white">{formatCurrency(totalPurchase)}</p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase text-slate-400">回収率</p>
             <p
               className={`mt-1 text-base font-semibold ${
-                recoveryRate >= 100 ? "text-emerald-600" : "text-slate-900"
+                recoveryRate >= 100 ? "text-emerald-300" : "text-white"
               }`}
             >
               {recoveryRate.toFixed(1)}%
@@ -517,7 +545,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
       </div>
 
       <div className="mt-6 space-y-2">
-        <label htmlFor="memo" className="text-sm font-medium text-slate-700">
+        <label htmlFor="memo" className="text-sm font-medium text-slate-200">
           メモ
         </label>
         <textarea
@@ -526,18 +554,18 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           onChange={(event) => setMemo(event.target.value)}
           rows={3}
           placeholder="コメントなど"
-          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          className={`${INPUT_BASE_CLASS} min-h-[120px]`}
         />
       </div>
 
       <div className="mt-6 space-y-2">
-        <label className="text-sm font-medium text-slate-700">画像</label>
+        <label className="text-sm font-medium text-slate-200">画像</label>
         <div
           className={`rounded-lg border-2 border-dashed p-6 text-sm transition ${
             isDragging
-              ? "border-slate-400 bg-white shadow-lg shadow-slate-300/40"
-              : "border-slate-300 bg-slate-50"
-          } text-slate-500`}
+              ? "border-emerald-400/60 bg-emerald-500/10 shadow-lg shadow-emerald-500/20"
+              : "border-white/20 bg-slate-950/30"
+          } text-slate-200`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -546,18 +574,18 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-3 inline-flex items-center rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+            className={`${SMALL_BUTTON_CLASS} mt-3 inline-flex items-center px-4`}
           >
             ファイルを選択
           </button>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-slate-300">
             クリックまたはドラッグ＆ドロップで画像を選択できます。画像は Supabase Storage に保存されます。
           </p>
-      {imagePreview && (
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <img src={imagePreview} alt="プレビュー" className="h-auto w-full" />
-        </div>
-      )}
+          {imagePreview && (
+            <div className="mt-4 overflow-hidden rounded-lg border border-white/15 bg-slate-950/40">
+              <img src={imagePreview} alt="プレビュー" className="h-auto w-full" />
+            </div>
+          )}
           {(existingImagePath || selectedFile) && (
             <button
               type="button"
@@ -569,7 +597,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
                   setRemoveExistingImage(true);
                 }
               }}
-              className="mt-3 inline-flex items-center rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+              className={`${SMALL_BUTTON_CLASS} mt-3 inline-flex items-center px-4`}
             >
               画像を削除
             </button>
@@ -578,7 +606,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
             type="button"
           onClick={handleRunOcr}
           disabled={ocrLoading}
-            className="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+            className={`${PRIMARY_BUTTON_CLASS} mt-4 inline-flex items-center px-5 py-2 text-xs`}
           >
             {ocrLoading ? "解析中..." : "OCRで自動入力"}
           </button>
@@ -586,24 +614,16 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
       </div>
 
       {error && (
-        <div className="mt-6 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+        <div className={`${DANGER_PANEL_CLASS} mt-6`}>
           {error}
         </div>
       )}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-md bg-slate-900 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
-        >
+        <button type="submit" disabled={loading} className={PRIMARY_BUTTON_CLASS}>
           {loading ? "保存中..." : "保存"}
         </button>
-        <button
-          type="button"
-          onClick={resetForm}
-          className="rounded-md border border-slate-200 px-5 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-        >
+        <button type="button" onClick={resetForm} className={SECONDARY_BUTTON_CLASS}>
           フォームをリセット
         </button>
       </div>
@@ -613,33 +633,42 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess }: BetsFormProps)
 
 const TextField = ({ label, className, ...props }: { label: string; className?: string } & InputHTMLAttributes<HTMLInputElement>) => (
   <div className={className ? `${className} space-y-1` : "space-y-1"}>
-    <label className="text-sm font-medium text-slate-700">{label}</label>
-    <input
-      {...props}
-      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-    />
+    <label className="text-sm font-medium text-slate-200">{label}</label>
+    <input {...props} className={INPUT_BASE_CLASS} />
   </div>
 );
 
+type SelectOption = { value: string; label: string };
+
+type SelectOptionGroup = { label: string; options: SelectOption[] };
+
 const SelectField = ({
   label,
-  options,
+  options = [],
+  optionGroups = [],
   placeholder = "選択してください",
   className,
   ...props
 }: {
   label: string;
-  options: { value: string; label: string }[];
+  options?: SelectOption[];
+  optionGroups?: SelectOptionGroup[];
   placeholder?: string;
   className?: string;
 } & SelectHTMLAttributes<HTMLSelectElement>) => (
   <div className={className ? `${className} space-y-1` : "space-y-1"}>
-    <label className="text-sm font-medium text-slate-700">{label}</label>
-    <select
-      {...props}
-      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-    >
+    <label className="text-sm font-medium text-slate-200">{label}</label>
+    <select {...props} className={INPUT_BASE_CLASS}>
       <option value="">{placeholder}</option>
+      {optionGroups.map((group) => (
+        <optgroup key={group.label} label={group.label}>
+          {group.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
