@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabaseClient } from "@/lib/supabaseClient";
@@ -555,7 +556,17 @@ function DashboardArea({ onSignOut }: { onSignOut: () => void }) {
 
       <BetsStats />
 
-      <BetsList onEdit={handleEdit} onDelete={handleDelete} />
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-white">登録済み馬券</h2>
+        <Link
+          href="/dashboard/bets"
+          className="text-sm font-medium text-emerald-300 transition hover:text-emerald-200"
+        >
+          馬券管理ページで全件を見る
+        </Link>
+      </div>
+
+      <BetsList onEdit={handleEdit} onDelete={handleDelete} maxItems={10} />
     </div>
   );
 }

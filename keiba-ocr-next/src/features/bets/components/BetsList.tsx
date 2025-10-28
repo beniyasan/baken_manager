@@ -7,6 +7,7 @@ import type { BetRecord } from "@/lib/types";
 type BetsListProps = {
   onEdit: (bet: BetRecord) => void;
   onDelete: (bet: BetRecord) => void;
+  maxItems?: number;
 };
 
 const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
@@ -16,9 +17,12 @@ const ACTION_BUTTON_CLASS =
 const DANGER_BUTTON_CLASS =
   "rounded-md border border-rose-400/60 px-3 py-1 text-sm text-rose-200 transition hover:border-rose-300 hover:text-rose-100";
 
-export const BetsList = ({ onEdit, onDelete }: BetsListProps) => {
+export const BetsList = ({ onEdit, onDelete, maxItems }: BetsListProps) => {
   const { bets, loading, error } = useBetsContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const displayedBets =
+    typeof maxItems === "number" && maxItems >= 0 ? bets.slice(0, maxItems) : bets;
+  const remainingCount = bets.length - displayedBets.length;
 
   if (loading) {
     return (
@@ -46,7 +50,7 @@ export const BetsList = ({ onEdit, onDelete }: BetsListProps) => {
 
   return (
     <div className="space-y-4">
-      {bets.map((bet) => {
+      {displayedBets.map((bet) => {
         const isExpanded = expandedId === bet.id;
         return (
           <div
@@ -134,6 +138,11 @@ export const BetsList = ({ onEdit, onDelete }: BetsListProps) => {
           </div>
         );
       })}
+      {remainingCount > 0 && (
+        <p className="text-right text-xs text-slate-400">
+          ほか {remainingCount} 件の馬券は一覧ページで確認できます。
+        </p>
+      )}
     </div>
   );
 };
