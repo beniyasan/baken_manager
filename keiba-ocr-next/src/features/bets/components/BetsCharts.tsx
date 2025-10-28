@@ -44,24 +44,25 @@ export const BetsCharts = () => {
             <AreaChart data={timelineData}>
               <defs>
                 <linearGradient id="purchaseColor" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1d4ed8" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="payoutColor" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#34d399" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="periodLabel" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" tickFormatter={formatCurrency} width={90} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+              <XAxis dataKey="periodLabel" stroke="#cbd5f5" tick={{ fill: "#cbd5f5" }} />
+              <YAxis stroke="#cbd5f5" tickFormatter={formatCurrency} tick={{ fill: "#cbd5f5" }} width={90} />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 labelFormatter={(_, items) => items?.[0]?.payload?.periodLabel ?? ""}
+                contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1f2937", color: "#e2e8f0" }}
               />
-              <Legend />
-              <Area type="monotone" dataKey="purchase" name="購入金額" stroke="#1d4ed8" fill="url(#purchaseColor)" />
-              <Area type="monotone" dataKey="payout" name="払戻金額" stroke="#0ea5e9" fill="url(#payoutColor)" />
+              <Legend wrapperStyle={{ color: "#e2e8f0" }} />
+              <Area type="monotone" dataKey="purchase" name="購入金額" stroke="#22d3ee" fill="url(#purchaseColor)" />
+              <Area type="monotone" dataKey="payout" name="払戻金額" stroke="#34d399" fill="url(#payoutColor)" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
@@ -73,12 +74,15 @@ export const BetsCharts = () => {
         {trackData.length ? (
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={trackData} layout="vertical" margin={{ left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis type="number" stroke="#94a3b8" tickFormatter={formatCurrency} />
-              <YAxis type="category" dataKey="track" stroke="#94a3b8" width={80} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Legend />
-              <Bar dataKey="purchase" name="購入金額" fill="#6366f1" stackId="a" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+              <XAxis type="number" stroke="#cbd5f5" tickFormatter={formatCurrency} tick={{ fill: "#cbd5f5" }} />
+              <YAxis type="category" dataKey="track" stroke="#cbd5f5" tick={{ fill: "#cbd5f5" }} width={80} />
+              <Tooltip
+                formatter={(value: number) => formatCurrency(value)}
+                contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1f2937", color: "#e2e8f0" }}
+              />
+              <Legend wrapperStyle={{ color: "#e2e8f0" }} />
+              <Bar dataKey="purchase" name="購入金額" fill="#22d3ee" stackId="a" />
               <Bar dataKey="payout" name="払戻金額" fill="#34d399" stackId="a" />
             </BarChart>
           </ResponsiveContainer>
@@ -91,12 +95,15 @@ export const BetsCharts = () => {
         {sourceData.length ? (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={sourceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="source" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" tickFormatter={(value) => `${value.toFixed(0)}%`} />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
-              <Legend />
-              <Bar dataKey="recoveryRate" name="回収率" fill="#facc15">
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+              <XAxis dataKey="source" stroke="#cbd5f5" tick={{ fill: "#cbd5f5" }} />
+              <YAxis stroke="#cbd5f5" tickFormatter={(value) => `${value.toFixed(0)}%`} tick={{ fill: "#cbd5f5" }} />
+              <Tooltip
+                formatter={(value: number) => `${value.toFixed(1)}%`}
+                contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1f2937", color: "#e2e8f0" }}
+              />
+              <Legend wrapperStyle={{ color: "#e2e8f0" }} />
+              <Bar dataKey="recoveryRate" name="回収率" fill="#22d3ee">
                 {/* stacked bars not needed */}
               </Bar>
             </BarChart>
@@ -110,14 +117,14 @@ export const BetsCharts = () => {
 };
 
 const ChartCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-    <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+  <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-6 shadow-xl shadow-emerald-500/10">
+    <h3 className="text-lg font-semibold text-white">{title}</h3>
     <div className="mt-4">{children}</div>
   </div>
 );
 
 const EmptyMessage = ({ message }: { message: string }) => (
-  <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+  <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-white/15 bg-slate-950/30 text-sm text-slate-300">
     {message}
   </div>
 );
