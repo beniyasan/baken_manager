@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     if (plan.ocrMonthlyLimit !== null) {
       const { data: consumeData, error: consumeError } = await supabase.rpc("consume_ocr_credit", {
+        target_user: user.id,
         target_month: usageMonth,
         usage_limit: plan.ocrMonthlyLimit,
       });
