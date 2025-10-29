@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import {
-  MissingSupabaseEnvError,
   createSupabaseRouteClient,
+  isMissingSupabaseEnvError,
 } from "@/lib/supabaseRouteClient";
+
+export const runtime = "nodejs";
 
 const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions";
 const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要です。";
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(structured);
   } catch (error) {
     console.error("Perplexity 呼び出しエラー", error);
-    if (error instanceof MissingSupabaseEnvError) {
+    if (isMissingSupabaseEnvError(error)) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });

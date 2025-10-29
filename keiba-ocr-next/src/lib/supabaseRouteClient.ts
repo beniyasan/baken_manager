@@ -5,10 +5,31 @@ export class MissingSupabaseEnvError extends Error {
   constructor(missingKeys: string[]) {
     const messageBase =
       "Supabase の接続情報が見つかりません。NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY を設定してください。";
-    super(missingKeys.length ? `${messageBase} (不足: ${missingKeys.join(", ")})` : messageBase);
+    super(
+      missingKeys.length
+        ? `${messageBase} (不足: ${missingKeys.join(", ")})`
+        : messageBase,
+    );
     this.name = "MissingSupabaseEnvError";
   }
 }
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+export const isMissingSupabaseEnvError = (
+  error: unknown,
+): error is MissingSupabaseEnvError => {
+  if (error instanceof MissingSupabaseEnvError) {
+    return true;
+  }
+
+  if (isObject(error) && "name" in error) {
+    return error.name === "MissingSupabaseEnvError";
+  }
+
+  return false;
+};
 
 type SupabaseEnv = {
   supabaseUrl: string;

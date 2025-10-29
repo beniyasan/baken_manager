@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { buildUsageSnapshot, getUsageMonthKey } from "@/lib/ocrUsage";
-import {
-  MissingSupabaseEnvError,
-  createSupabaseRouteClient,
-} from "@/lib/supabaseRouteClient";
+import { createSupabaseRouteClient, isMissingSupabaseEnvError } from "@/lib/supabaseRouteClient";
+
+export const runtime = "nodejs";
 
 const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要です。";
 
@@ -67,7 +66,7 @@ export async function GET() {
     return NextResponse.json(usageSnapshot);
   } catch (error) {
     console.error("OCR利用状況取得APIエラー", error);
-    if (error instanceof MissingSupabaseEnvError) {
+    if (isMissingSupabaseEnvError(error)) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
