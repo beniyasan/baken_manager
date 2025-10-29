@@ -9,6 +9,7 @@ import { uploadBetImage, removeBetImage } from "../utils/storage";
 import { supabaseClient } from "@/lib/supabaseClient";
 import type { PlanFeatures } from "@/lib/plans";
 import { FEATURE_MESSAGES } from "@/lib/plans";
+import type { OcrUsageSnapshot } from "@/lib/ocrUsage";
 
 const BET_TYPES = [
   "単勝",
@@ -116,6 +117,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrUsage, setOcrUsage] = useState<OcrUsageSnapshot | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -238,6 +240,36 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     if (isDragging) setIsDragging(false);
   };
 
+  useEffect(() => {
+    if (!planEnforced || plan.ocrMonthlyLimit === null) {
+      setOcrUsage(null);
+      return;
+    }
+
+    let active = true;
+
+    const loadUsage = async () => {
+      try {
+        const response = await fetch("/api/ocr/usage", { method: "GET", cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+        const usage: OcrUsageSnapshot = await response.json();
+        if (active) {
+          setOcrUsage(usage);
+        }
+      } catch (usageError: unknown) {
+        console.warn("OCR利用状況の取得に失敗", usageError);
+      }
+    };
+
+    loadUsage();
+
+    return () => {
+      active = false;
+    };
+  }, [planEnforced, plan.ocrMonthlyLimit]);
+
   const planLimitNotice = useMemo(() => {
     if (!planEnforced || plan.maxBets === null) return null;
     const count = bets.length;
@@ -245,12 +277,43 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     return `登録済み件数: ${Math.min(count, limit)}/${limit}`;
   }, [bets.length, plan.maxBets, planEnforced]);
 
+  const ocrUsageNotice = useMemo(() => {
+    if (!planEnforced || plan.ocrMonthlyLimit === null) return null;
+    const base = `OCRは月${plan.ocrMonthlyLimit}回まで利用できます。`;
+    if (!ocrUsage) {
+      return `${base}翌月1日にリセットされます。`;
+    }
+
+    if ((ocrUsage.remaining ?? 0) <= 0) {
+      return `${base}今月の利用可能回数を使い切りました。`;
+    }
+
+    const remainingLabel = `残り${ocrUsage.remaining}回`;
+
+    if (ocrUsage.resetAt) {
+      const formattedReset = new Intl.DateTimeFormat("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+        timeZone: "Asia/Tokyo",
+      }).format(new Date(ocrUsage.resetAt));
+      return `${base}${remainingLabel}（${formattedReset}にリセット）`;
+    }
+
+    return `${base}${remainingLabel}。`;
+  }, [planEnforced, plan.ocrMonthlyLimit, ocrUsage]);
+
   const limitReached = useMemo(() => {
     if (!planEnforced || plan.maxBets === null) return false;
     return !editingBet && bets.length >= plan.maxBets;
   }, [bets.length, plan.maxBets, planEnforced, editingBet]);
 
-  const ocrDisabled = planEnforced && !plan.ocrEnabled;
+  const ocrLimitExceeded = planEnforced && plan.ocrMonthlyLimit !== null && (ocrUsage?.remaining ?? 0) <= 0;
+
+  const ocrDisabled = useMemo(() => {
+    if (!planEnforced) return false;
+    if (!plan.ocrEnabled) return true;
+    return ocrLimitExceeded;
+  }, [planEnforced, plan.ocrEnabled, ocrLimitExceeded]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -312,9 +375,10 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
       setImagePreview(imageUrl ?? null);
       resetForm();
       onSuccess();
-    } catch (submitErr: any) {
+    } catch (submitErr: unknown) {
       console.error("保存エラー", submitErr);
-      setError(submitErr?.message ?? "保存に失敗しました");
+      const message = submitErr instanceof Error ? submitErr.message : undefined;
+      setError(message ?? "保存に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -356,7 +420,11 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
 
   const handleRunOcr = async () => {
     if (ocrDisabled) {
-      setError(FEATURE_MESSAGES.ocrDisabled);
+      if (ocrLimitExceeded) {
+        setError(FEATURE_MESSAGES.ocrLimitReached);
+      } else {
+        setError(FEATURE_MESSAGES.ocrDisabled);
+      }
       return;
     }
 
@@ -375,11 +443,20 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
       });
 
       if (!response.ok) {
-        const { error: message } = await response.json();
-        throw new Error(message || "OCR処理に失敗しました");
+        const body = await response
+          .json()
+          .catch(() => ({ error: "OCR処理に失敗しました" }));
+        if (body?.usage) {
+          setOcrUsage(body.usage as OcrUsageSnapshot);
+        }
+        const message = body?.error || "OCR処理に失敗しました";
+        throw new Error(message);
       }
 
-      const { text } = await response.json();
+      const { text, usage } = await response.json();
+      if (usage) {
+        setOcrUsage(usage as OcrUsageSnapshot);
+      }
       if (!text) {
         throw new Error("OCR結果が取得できませんでした");
       }
@@ -412,9 +489,10 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
       if (merged.payout !== undefined) setPayout(merged.payout);
       if (merged.memo) setMemo(merged.memo);
       if (merged.bets.length) setTickets(merged.bets.map((ticket) => ({ ...ticket })));
-    } catch (ocrError: any) {
+    } catch (ocrError: unknown) {
       console.error("OCRエラー", ocrError);
-      setError(ocrError?.message || "OCR処理に失敗しました");
+      const message = ocrError instanceof Error ? ocrError.message : undefined;
+      setError(message || "OCR処理に失敗しました");
     } finally {
       setOcrLoading(false);
     }
@@ -638,10 +716,13 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
           >
             {ocrLoading ? "解析中..." : "OCRで自動入力"}
           </button>
+          {planEnforced && plan.ocrMonthlyLimit !== null && ocrUsageNotice && (
+            <p className="mt-2 text-xs text-slate-300">{ocrUsageNotice}</p>
+          )}
           {ocrDisabled && (
             <div className="mt-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-              <p>{FEATURE_MESSAGES.ocrDisabled}</p>
-              {plan.upgradeUrl && (
+              <p>{ocrLimitExceeded ? FEATURE_MESSAGES.ocrLimitReached : FEATURE_MESSAGES.ocrDisabled}</p>
+              {!ocrLimitExceeded && plan.upgradeUrl && (
                 <a
                   href={plan.upgradeUrl}
                   target="_blank"

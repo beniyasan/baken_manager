@@ -857,7 +857,7 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
                 <span>
                   登録上限: {plan.maxBets !== null ? `${plan.maxBets}件` : "無制限"}
                 </span>
-                <span>OCR: {plan.ocrEnabled ? "利用可" : "利用不可"}</span>
+                <span>OCR: {plan.ocrEnabled ? plan.ocrUsageLabel : "利用不可"}</span>
               </div>
               {!plan.ocrEnabled && plan.upgradeUrl && (
                 <a

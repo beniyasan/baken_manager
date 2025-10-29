@@ -1,12 +1,48 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 
 const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions";
+const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要です。";
 
 export async function POST(request: NextRequest) {
   try {
     const { text } = await request.json();
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "テキストが無効です" }, { status: 400 });
+    }
+
+    const supabase = createRouteHandlerClient({ cookies });
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("Supabase 認証情報の取得に失敗", authError);
+      return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
+    }
+
+    const { data: profileRow, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("ユーザープロフィールの取得に失敗", profileError);
+      return NextResponse.json({ error: "OCR利用状況の取得に失敗しました" }, { status: 500 });
+    }
+
+    const plan = resolvePlan(profileRow?.user_role ?? null);
+
+    if (!plan.ocrEnabled) {
+      return NextResponse.json({ error: FEATURE_MESSAGES.ocrDisabled }, { status: 403 });
     }
 
     const apiKey = process.env.PERPLEXITY_API_KEY;
