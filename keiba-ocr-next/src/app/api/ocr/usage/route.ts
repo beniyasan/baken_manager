@@ -9,7 +9,7 @@ const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要で
 
 export async function GET() {
   try {
-    const supabase = createSupabaseRouteClient();
+    const supabase = await createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,

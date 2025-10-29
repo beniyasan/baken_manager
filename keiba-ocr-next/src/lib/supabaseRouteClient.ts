@@ -62,10 +62,11 @@ const resolveSupabaseEnv = (): SupabaseEnv => {
   return { supabaseUrl, supabaseAnonKey };
 };
 
-export const createSupabaseRouteClient = () => {
+export const createSupabaseRouteClient = async () => {
   const { supabaseUrl, supabaseAnonKey } = resolveSupabaseEnv();
+  const cookieStore = cookies();
   return createRouteHandlerClient(
-    { cookies },
+    { cookies: () => cookieStore },
     { supabaseUrl, supabaseKey: supabaseAnonKey },
   );
 };
