@@ -307,13 +307,19 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     return !editingBet && bets.length >= plan.maxBets;
   }, [bets.length, plan.maxBets, planEnforced, editingBet]);
 
-  const ocrLimitExceeded = planEnforced && plan.ocrMonthlyLimit !== null && (ocrUsage?.remaining ?? 0) <= 0;
+  const ocrLimitExceeded =
+    planEnforced &&
+    plan.ocrMonthlyLimit !== null &&
+    ocrUsage !== null &&
+    (ocrUsage.remaining ?? plan.ocrMonthlyLimit) <= 0;
 
   const ocrDisabled = useMemo(() => {
     if (!planEnforced) return false;
     if (!plan.ocrEnabled) return true;
-    return ocrLimitExceeded;
-  }, [planEnforced, plan.ocrEnabled, ocrLimitExceeded]);
+    if (plan.ocrMonthlyLimit === null) return false;
+    if (!ocrUsage) return false;
+    return (ocrUsage.remaining ?? plan.ocrMonthlyLimit) <= 0;
+  }, [planEnforced, plan.ocrEnabled, plan.ocrMonthlyLimit, ocrUsage]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
