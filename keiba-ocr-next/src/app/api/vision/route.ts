@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "GCV_API_KEY が設定されていません" }, { status: 500 });
     }
 
-    const supabase = createSupabaseRouteClient();
+    const supabase = await createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,

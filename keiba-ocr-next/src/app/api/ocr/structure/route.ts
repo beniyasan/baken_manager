@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "テキストが無効です" }, { status: 400 });
     }
 
-    const supabase = createSupabaseRouteClient();
+    const supabase = await createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,
