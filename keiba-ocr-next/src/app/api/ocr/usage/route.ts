@@ -1,14 +1,16 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { buildUsageSnapshot, getUsageMonthKey } from "@/lib/ocrUsage";
+import {
+  MissingSupabaseEnvError,
+  createSupabaseRouteClient,
+} from "@/lib/supabaseRouteClient";
 
 const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要です。";
 
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,
@@ -65,6 +67,9 @@ export async function GET() {
     return NextResponse.json(usageSnapshot);
   } catch (error) {
     console.error("OCR利用状況取得APIエラー", error);
+    if (error instanceof MissingSupabaseEnvError) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

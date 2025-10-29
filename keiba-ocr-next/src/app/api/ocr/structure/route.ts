@@ -1,7 +1,9 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
+import {
+  MissingSupabaseEnvError,
+  createSupabaseRouteClient,
+} from "@/lib/supabaseRouteClient";
 
 const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions";
 const LOGIN_REQUIRED_MESSAGE = "OCRを利用するにはログインが必要です。";
@@ -13,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "テキストが無効です" }, { status: 400 });
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,
@@ -123,6 +125,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(structured);
   } catch (error) {
     console.error("Perplexity 呼び出しエラー", error);
+    if (error instanceof MissingSupabaseEnvError) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
