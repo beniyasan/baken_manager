@@ -3,22 +3,15 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { resolveSupabaseEnv } from "@/lib/supabaseEnv";
+import type { Database } from "@/types/database";
 
-let client: SupabaseClient | null = null;
+let client: SupabaseClient<Database> | null = null;
 
-export const getSupabaseClient = (): SupabaseClient => {
-  if (client) {
-    return client;
+export const getSupabaseBrowserClient = (): SupabaseClient<Database> => {
+  if (!client) {
+    client = createClientComponentClient<Database>();
   }
-
-  const { supabaseUrl, supabaseAnonKey } = resolveSupabaseEnv();
-  client = createClientComponentClient({
-    supabaseUrl,
-    supabaseKey: supabaseAnonKey,
-  });
-
   return client;
 };
 
-export const supabaseClient = getSupabaseClient();
+export const supabaseClient = getSupabaseBrowserClient();

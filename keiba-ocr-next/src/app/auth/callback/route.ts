@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
+import type { Database } from "@/types/database";
+
+export const runtime = "nodejs";
+
 const DEFAULT_REDIRECT_PATH = "/dashboard";
 
 const buildRedirectUrl = (requestUrl: URL, path: string): URL =>
@@ -17,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createRouteHandlerClient<Database>({ cookies });
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {

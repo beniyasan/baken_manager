@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { buildUsageSnapshot, getUsageMonthKey, type OcrUsageSnapshot } from "@/lib/ocrUsage";
-import {
-  createSupabaseRouteClient,
-  isMissingSupabaseEnvError,
-} from "@/lib/supabaseRouteClient";
+import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 
 export const runtime = "nodejs";
 
@@ -24,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "GCV_API_KEY が設定されていません" }, { status: 500 });
     }
 
-    const supabase = await createSupabaseRouteClient();
+    const supabase = createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,
@@ -183,9 +180,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ text, usage: nextUsageSnapshot });
   } catch (error) {
     console.error("Vision API 呼び出しエラー", error);
-    if (isMissingSupabaseEnvError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
