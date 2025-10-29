@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -793,11 +793,18 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [showForm, setShowForm] = useState(true);
   const { deleteBet, fetchBets } = useBetsContext();
+  const formSectionRef = useRef<HTMLDivElement | null>(null);
 
   const handleEdit = (bet: BetRecord) => {
     setEditingBet(bet);
     setShowForm(true);
   };
+
+  useEffect(() => {
+    if (editingBet && showForm) {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [editingBet, showForm]);
 
   const handleDelete = async (bet: BetRecord) => {
     if (!confirm("このデータを削除してもよろしいですか？")) return;
@@ -868,13 +875,15 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
       </Card>
 
       {showForm && (
-        <BetsForm
-          editingBet={editingBet}
-          onCancelEdit={() => setEditingBet(null)}
-          onSuccess={handleSuccess}
-          plan={plan}
-          planEnforced={planEnforced}
-        />
+        <div ref={formSectionRef}>
+          <BetsForm
+            editingBet={editingBet}
+            onCancelEdit={() => setEditingBet(null)}
+            onSuccess={handleSuccess}
+            plan={plan}
+            planEnforced={planEnforced}
+          />
+        </div>
       )}
 
       <BetsStats />
