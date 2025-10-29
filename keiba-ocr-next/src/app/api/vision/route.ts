@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       (Array.isArray(visionResponse.textAnnotations) ? visionResponse.textAnnotations[0]?.description : "") ??
       "";
 
-    let nextUsageSnapshot = usageSnapshot;
+    let nextUsageSnapshot: OcrUsageSnapshot | null = usageSnapshot;
 
     if (plan.ocrMonthlyLimit !== null) {
       const { data: consumeData, error: consumeError } = await supabase.rpc("consume_ocr_credit", {

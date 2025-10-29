@@ -41,7 +41,8 @@ export const buildUsageSnapshot = (options: {
   used: number | null | undefined;
   date?: Date;
 }): OcrUsageSnapshot => {
-  const { limit, used = 0, date = new Date() } = options;
+  const { limit, used: rawUsed, date = new Date() } = options;
+  const used = rawUsed ?? 0;
   if (limit === null) {
     return {
       limit: null,
