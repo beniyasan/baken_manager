@@ -7,6 +7,8 @@ export type PlanFeatures = {
   label: string;
   maxBets: number | null;
   ocrEnabled: boolean;
+  ocrMonthlyLimit: number | null;
+  ocrUsageLabel: string;
   aiAssistEnabled: boolean;
   upgradeUrl?: string;
 };
@@ -28,7 +30,9 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     role: "free",
     label: "フリープラン",
     maxBets: 200,
-    ocrEnabled: false,
+    ocrEnabled: true,
+    ocrMonthlyLimit: 10,
+    ocrUsageLabel: "月10回まで",
     aiAssistEnabled: false,
     upgradeUrl: "/#pricing",
   },
@@ -37,6 +41,8 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     label: "プレミアムプラン",
     maxBets: null,
     ocrEnabled: true,
+    ocrMonthlyLimit: null,
+    ocrUsageLabel: "無制限",
     aiAssistEnabled: true,
   },
   admin: {
@@ -44,12 +50,15 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     label: "管理者",
     maxBets: null,
     ocrEnabled: true,
+    ocrMonthlyLimit: null,
+    ocrUsageLabel: "無制限",
     aiAssistEnabled: true,
   },
 };
 
 export const FEATURE_MESSAGES = {
-  ocrDisabled: "画像のOCR解析はプレミアムプラン限定の機能です。",
+  ocrDisabled: "画像のOCR解析は現在ご利用いただけません。",
+  ocrLimitReached: "フリープランで利用できる今月のOCR回数が上限に達しました。翌月1日に自動でリセットされます。",
   aiAssistDisabled: "AIによる買い目補助はプレミアムプラン限定の機能です。",
   maxBets: (limit: number) => `保存できる馬券データはフリープランでは${limit}件までです。`,
 };
