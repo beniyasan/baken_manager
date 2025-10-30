@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Keiba OCR Manager",
-  description: "Horse racing ticket management dashboard powered by Supabase and Next.js",
+  description: "Horse racing ticket management dashboard powered by a modern database and Next.js",
 };
 
 export default function RootLayout({

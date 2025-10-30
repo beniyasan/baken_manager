@@ -453,7 +453,7 @@ export default function DashboardPage() {
             <CardContent className="flex items-center gap-3 text-sm text-slate-200">
               <CloudArrowUpIcon className="h-10 w-10 text-emerald-300" />
               <div>
-                <p className="font-semibold text-white">OCR & Supabase 連携</p>
+                <p className="font-semibold text-white">OCR & データベース連携</p>
                 <p className="text-slate-300">{accountLabel}</p>
                 {planEnforced ? (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-emerald-200">
@@ -832,7 +832,7 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
           <div>
             <CardTitle className="text-xl text-white">馬券データダッシュボード</CardTitle>
             <CardDescription className="text-sm text-slate-300">
-              Supabase に保存された馬券データを管理します。フォームで追加・編集・削除ができます。
+              データベースに保存された馬券データを管理します。フォームで追加・編集・削除ができます。
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
