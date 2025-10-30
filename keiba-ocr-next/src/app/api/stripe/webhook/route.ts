@@ -28,11 +28,10 @@ const extractCustomerId = (
 };
 
 const extractSubscriptionId = (
-  subscription: string | Stripe.Subscription | Stripe.DeletedSubscription | null | undefined,
+  subscription: string | Stripe.Subscription | null | undefined,
 ): string | null => {
   if (!subscription) return null;
   if (typeof subscription === "string") return subscription;
-  if ("deleted" in subscription && subscription.deleted) return null;
   return subscription.id;
 };
 
