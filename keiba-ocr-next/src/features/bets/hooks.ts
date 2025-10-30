@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import type { BetRecord, BetTicket } from "@/lib/types";
 import type { Database, Json } from "@/types/database";
+import { ALL_TRACK_VALUES, UNSPECIFIED_TRACK_OPTION } from "./constants";
 
 type BetsInsert = Database["public"]["Tables"]["bets"]["Insert"];
 type BetsUpdate = Database["public"]["Tables"]["bets"]["Update"];
@@ -124,6 +125,11 @@ export const useBets = () => {
   const [bets, setBets] = useState<BetRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    dateFrom: null as string | null,
+    dateTo: null as string | null,
+    tracks: [] as string[],
+  });
 
   const fetchBets = useCallback(async () => {
     setLoading(true);
@@ -154,6 +160,69 @@ export const useBets = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const filteredBets = useMemo(() => {
+    if (!filters.dateFrom && !filters.dateTo && filters.tracks.length === 0) {
+      return bets;
+    }
+
+    const selectedTracks = new Set(filters.tracks);
+    const hasTrackFilter = selectedTracks.size > 0;
+
+    return bets.filter((bet) => {
+      const normalizedDate = bet.date ? bet.date.slice(0, 10) : null;
+
+      if (filters.dateFrom && (!normalizedDate || normalizedDate < filters.dateFrom)) {
+        return false;
+      }
+
+      if (filters.dateTo && (!normalizedDate || normalizedDate > filters.dateTo)) {
+        return false;
+      }
+
+      if (hasTrackFilter) {
+        const trackValue = bet.track ?? null;
+        const resolvedTrack = trackValue
+          ? ALL_TRACK_VALUES.includes(trackValue)
+            ? trackValue
+            : "その他"
+          : null;
+
+        if (!resolvedTrack) {
+          return selectedTracks.has(UNSPECIFIED_TRACK_OPTION.value);
+        }
+
+        return selectedTracks.has(resolvedTrack);
+      }
+
+      return true;
+    });
+  }, [bets, filters]);
+
+  const hasActiveFilters = useMemo(
+    () => Boolean(filters.dateFrom || filters.dateTo || filters.tracks.length),
+    [filters.dateFrom, filters.dateTo, filters.tracks.length],
+  );
+
+  const setDateRange = useCallback((from: string | null, to: string | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      dateFrom: from,
+      dateTo: to,
+    }));
+  }, []);
+
+  const setTrackFilters = useCallback((tracks: string[]) => {
+    const normalized = Array.from(new Set(tracks)).filter(Boolean).sort();
+    setFilters((prev) => ({
+      ...prev,
+      tracks: normalized,
+    }));
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setFilters({ dateFrom: null, dateTo: null, tracks: [] });
   }, []);
 
   const addBet = useCallback(async (bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
@@ -286,9 +355,15 @@ export const useBets = () => {
 
   return {
     bets,
+    filteredBets,
     loading,
     error,
     stats,
+    filters,
+    hasActiveFilters,
+    setDateRange,
+    setTrackFilters,
+    resetFilters,
     fetchBets,
     addBet,
     updateBet,
