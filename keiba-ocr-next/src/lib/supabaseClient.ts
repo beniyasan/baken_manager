@@ -1,17 +1,12 @@
 "use client";
 
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
 
-let client: SupabaseClient<Database> | null = null;
+export const supabaseClient =
+  createClientComponentClient<Database>() as unknown as SupabaseClient<Database>;
 
-export const getSupabaseBrowserClient = (): SupabaseClient<Database> => {
-  if (!client) {
-    client = createClientComponentClient<Database>();
-  }
-  return client;
-};
-
-export const supabaseClient = getSupabaseBrowserClient();
+export const getSupabaseBrowserClient = () => supabaseClient;

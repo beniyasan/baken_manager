@@ -11,6 +11,7 @@ import { BetsForm } from "@/features/bets/components/BetsForm";
 import { BetsStats } from "@/features/bets/components/BetsStats";
 import { Header } from "@/components/Header";
 import type { BetRecord } from "@/lib/types";
+import type { Database } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { type CurrentProfile, type PlanFeatures, getAccountLabel, normalizeProfile, resolvePlan } from "@/lib/plans";
@@ -328,7 +329,9 @@ export default function DashboardPage() {
           setCurrentUser(updatedUser);
           await supabaseClient
             .from("profiles")
-            .update({ display_name: trimmedName })
+            .update<Database["public"]["Tables"]["profiles"]["Update"]>({
+              display_name: trimmedName,
+            })
             .eq("id", updatedUser.id)
             .throwOnError();
           setCurrentProfile((prev) =>

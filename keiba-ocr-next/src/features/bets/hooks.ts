@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseClient } from "@/lib/supabaseClient";
 import type { BetRecord, BetTicket } from "@/lib/types";
+import type { Database, Json } from "@/types/database";
+
+type BetsInsert = Database["public"]["Tables"]["bets"]["Insert"];
+type BetsUpdate = Database["public"]["Tables"]["bets"]["Update"];
 
 const storageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "bet-images";
 
@@ -50,12 +54,32 @@ const mapRowToBet = (row: any): BetRecord => {
   };
 };
 
-const mapBetToPayload = (bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
+const toBetTicketsJson = (tickets: BetTicket[]): Json => {
+  const structuredTickets = tickets.map((ticket) => ({
+    type: ticket.type,
+    numbers: ticket.numbers,
+    amount: ticket.amount,
+  }));
+
+  return structuredTickets as unknown as Json;
+};
+
+const calculateRecoveryRate = (totalPurchase: number, payout: number) =>
+  totalPurchase > 0 ? (payout / totalPurchase) * 100 : 0;
+
+const mapBetToInsertPayload = (
+  bet: Partial<BetRecord> & { bets: BetTicket[] },
+  userId: string,
+): BetsInsert => {
+  if (!bet.date) {
+    throw new Error("レース日が入力されていません");
+  }
+
   const totalPurchase = bet.bets.reduce((sum, ticket) => sum + (ticket.amount ?? 0), 0);
   const payout = bet.payout ?? 0;
 
   return {
-    race_date: bet.date ?? null,
+    race_date: bet.date,
     source: bet.source ?? "unknown",
     race_name: bet.raceName ?? null,
     track: bet.track ?? extractTrackName(bet.raceName ?? null),
@@ -63,15 +87,37 @@ const mapBetToPayload = (bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
     amount_bet: totalPurchase,
     amount_returned: payout,
     memo: bet.memo ?? null,
-    bets: bet.bets.map((ticket) => ({
-      type: ticket.type,
-      numbers: ticket.numbers,
-      amount: ticket.amount,
-    })),
+    bets: toBetTicketsJson(bet.bets),
     image_path: bet.imagePath ?? null,
-    recovery_rate: totalPurchase > 0 ? (payout / totalPurchase) * 100 : 0,
-    user_id: bet.userId ?? null,
+    recovery_rate: calculateRecoveryRate(totalPurchase, payout),
+    user_id: userId,
   };
+};
+
+const mapBetToUpdatePayload = (
+  bet: Partial<BetRecord> & { bets: BetTicket[] },
+  userId: string,
+): BetsUpdate => {
+  const totalPurchase = bet.bets.reduce((sum, ticket) => sum + (ticket.amount ?? 0), 0);
+  const payout = bet.payout ?? 0;
+
+  const payload: BetsUpdate = {
+    user_id: userId,
+    amount_bet: totalPurchase,
+    amount_returned: payout,
+    ticket_type: bet.bets.length === 1 ? bet.bets[0].type : "multiple",
+    recovery_rate: calculateRecoveryRate(totalPurchase, payout),
+    bets: toBetTicketsJson(bet.bets),
+    memo: bet.memo ?? null,
+    image_path: bet.imagePath ?? null,
+  };
+
+  if (bet.date) payload.race_date = bet.date;
+  payload.source = bet.source ?? "unknown";
+  payload.race_name = bet.raceName ?? null;
+  payload.track = bet.track ?? extractTrackName(bet.raceName ?? null);
+
+  return payload;
 };
 
 export const useBets = () => {
@@ -114,10 +160,7 @@ export const useBets = () => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error("ログインが必要です");
 
-    const payload = {
-      ...mapBetToPayload(bet),
-      user_id: user.id,
-    };
+    const payload = mapBetToInsertPayload(bet, user.id);
 
     const { data, error: insertError } = await supabaseClient
       .from("bets")
@@ -134,7 +177,7 @@ export const useBets = () => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error("ログインが必要です");
 
-    const payload = { ...mapBetToPayload(bet), user_id: user.id };
+    const payload = mapBetToUpdatePayload(bet, user.id);
 
     const { data, error: updateError } = await supabaseClient
       .from("bets")
