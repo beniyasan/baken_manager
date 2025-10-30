@@ -21,7 +21,8 @@ const features = [
 const flowSteps = [
   {
     title: "馬券を撮影",
-    description: "スマホで撮影した画像をそのままアップロードします。",
+    description:
+      "SPAT4や即PATの投票結果画面のスクリーンショットやスマホで撮影した画像をそのままアップロードします。",
   },
   {
     title: "AIが自動解析",
