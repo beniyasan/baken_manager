@@ -12,13 +12,13 @@ type BetsTableProps = {
 };
 
 export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTableProps) => {
-  const { bets, loading, error } = useBetsContext();
+  const { bets, filteredBets, loading, error, hasActiveFilters } = useBetsContext();
 
   const { rows, totalRowCount } = useMemo(() => {
     const renderedRows: ReactNode[] = [];
     let rowIndex = 0;
 
-    bets.forEach((bet) => {
+    filteredBets.forEach((bet) => {
       const tickets = bet.bets.length ? bet.bets : [null];
       const rowSpan = tickets.length;
 
@@ -106,7 +106,7 @@ export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTablePr
     });
 
     return { rows: renderedRows, totalRowCount: rowIndex };
-  }, [bets, onEdit, showActions]);
+  }, [filteredBets, onEdit, showActions]);
 
   if (loading) {
     return (
@@ -128,6 +128,15 @@ export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTablePr
     return (
       <div className="rounded-2xl border border-dashed border-white/15 bg-slate-950/30 p-10 text-center shadow-xl shadow-emerald-500/10">
         <p className="text-sm text-slate-300">登録された馬券データがありません。フォームから追加してください。</p>
+      </div>
+    );
+  }
+
+  if (!filteredBets.length) {
+    return (
+      <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-10 text-center text-sm text-amber-100 shadow-xl shadow-amber-500/10">
+        <p>指定された条件に一致する馬券がありません。</p>
+        {hasActiveFilters ? <p className="mt-2 text-xs text-amber-200">フィルターを調整するかリセットしてください。</p> : null}
       </div>
     );
   }
@@ -179,6 +188,7 @@ export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTablePr
       </div>
       <div className="border-t border-white/10 px-4 py-3 text-right text-xs text-slate-400">
         全 {totalRowCount} 点を表示中
+        {hasActiveFilters ? " (フィルター適用中)" : ""}
       </div>
     </div>
   );
