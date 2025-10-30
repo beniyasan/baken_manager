@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/stripe";
+import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
@@ -30,7 +31,9 @@ export async function POST() {
       return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const adminSupabase = getSupabaseAdminClient();
+
+    const { data: profile, error: profileError } = await adminSupabase
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
@@ -55,7 +58,7 @@ export async function POST() {
 
       customerId = customer.id;
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminSupabase
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
