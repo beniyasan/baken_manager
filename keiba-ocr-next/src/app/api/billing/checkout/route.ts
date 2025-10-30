@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
@@ -6,13 +6,16 @@ import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
 
-export async function POST() {
+export const runtime = "nodejs";
+
+export async function POST(request: NextRequest) {
   try {
     const priceId = process.env.STRIPE_PRICE_ID_PREMIUM;
-    const appBaseUrl = process.env.APP_BASE_URL;
+    const appBaseUrl =
+      process.env.APP_BASE_URL ?? new URL(request.url).origin;
 
-    if (!priceId || !appBaseUrl) {
-      console.error("Stripe の価格IDまたは APP_BASE_URL が設定されていません");
+    if (!priceId) {
+      console.error("Stripe の価格IDが設定されていません");
       return NextResponse.json({ error: "課金設定が正しく構成されていません" }, { status: 500 });
     }
 
