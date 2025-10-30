@@ -7,9 +7,10 @@ import type { User } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
 import { supabaseClient } from "@/lib/supabaseClient";
 import { BetsProvider, useBetsContext } from "@/features/bets/components/BetsProvider";
-import { BetsTable } from "@/features/bets/components/BetsTable";
 import { BetsForm } from "@/features/bets/components/BetsForm";
 import { BetsFilters } from "@/features/bets/components/BetsFilters";
+import { BetsFilteredSummary } from "@/features/bets/components/BetsFilteredSummary";
+import { BetsTable } from "@/features/bets/components/BetsTable";
 import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
 import type { BetRecord } from "@/lib/types";
 
@@ -48,6 +49,7 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
   return (
     <div className="flex flex-col gap-6">
       <BetsFilters />
+      <BetsFilteredSummary />
       <BetsTable onEdit={handleEdit} showActions />
       <div ref={formContainerRef} className="scroll-mt-24">
         {formVisible ? (
