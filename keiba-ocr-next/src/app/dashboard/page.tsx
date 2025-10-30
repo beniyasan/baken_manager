@@ -481,7 +481,7 @@ export default function DashboardPage() {
               <CardContent className="flex items-center gap-3 text-sm text-slate-200">
                 <BuildingStorefrontIcon className="h-10 w-10 text-emerald-300" />
                 <div>
-                  <p className="font-semibold text-white">Vision API + Perplexity で補助解析</p>
+                  <p className="font-semibold text-white">OCRで補助解析</p>
                   <p className="text-slate-300">買い目や払戻も自動抽出します。</p>
                 </div>
               </CardContent>
