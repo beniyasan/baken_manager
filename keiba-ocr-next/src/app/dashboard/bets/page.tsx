@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -21,6 +21,7 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
   const { fetchBets } = useBetsContext();
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [formVisible, setFormVisible] = useState(false);
+  const formContainerRef = useRef<HTMLDivElement | null>(null);
 
   const handleEdit = useCallback((bet: BetRecord) => {
     setEditingBet(bet);
@@ -38,27 +39,34 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
     setFormVisible(false);
   }, [fetchBets]);
 
+  useEffect(() => {
+    if (!formVisible) return;
+    formContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [formVisible]);
+
   return (
     <div className="flex flex-col gap-6">
       <BetsTable onEdit={handleEdit} showActions />
-      {formVisible ? (
-        <BetsForm
-          editingBet={editingBet}
-          onCancelEdit={handleCancelEdit}
-          onSuccess={handleSuccess}
-          plan={plan}
-          planEnforced={planEnforced}
-        />
-      ) : (
-        <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-500/5 p-6 text-sm text-slate-200 shadow-xl shadow-emerald-500/10">
-          <h2 className="text-base font-semibold text-emerald-200">操作ガイド</h2>
-          <ol className="mt-3 list-decimal space-y-2 pl-5 text-slate-100">
-            <li>テーブルの「編集」ボタンを押すと、該当する馬券の編集フォームが開きます。</li>
-            <li>内容を更新して保存すると一覧が自動的に最新の状態へ更新されます。</li>
-            <li>編集をやめる場合はフォーム内の「キャンセル」を押してください。</li>
-          </ol>
-        </div>
-      )}
+      <div ref={formContainerRef} className="scroll-mt-24">
+        {formVisible ? (
+          <BetsForm
+            editingBet={editingBet}
+            onCancelEdit={handleCancelEdit}
+            onSuccess={handleSuccess}
+            plan={plan}
+            planEnforced={planEnforced}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-500/5 p-6 text-sm text-slate-200 shadow-xl shadow-emerald-500/10">
+            <h2 className="text-base font-semibold text-emerald-200">操作ガイド</h2>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-slate-100">
+              <li>テーブルの「編集」ボタンを押すと、該当する馬券の編集フォームが開きます。</li>
+              <li>内容を更新して保存すると一覧が自動的に最新の状態へ更新されます。</li>
+              <li>編集をやめる場合はフォーム内の「キャンセル」を押してください。</li>
+            </ol>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
