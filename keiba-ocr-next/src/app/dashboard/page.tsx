@@ -830,8 +830,8 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
       <Card className="border-white/10 bg-slate-900/60 shadow-xl shadow-emerald-500/10">
         <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-white/10">
           <div>
-            <CardTitle className="text-xl text-white">馬券データダッシュボード</CardTitle>
-            <CardDescription className="text-sm text-slate-300">
+            <CardTitle className="text-xl font-semibold text-white">馬券データダッシュボード</CardTitle>
+            <CardDescription className="text-sm text-slate-200">
               データベースに保存された馬券データを管理します。フォームで追加・編集・削除ができます。
             </CardDescription>
           </div>
@@ -852,9 +852,9 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
         </CardHeader>
         {planEnforced && (
           <CardContent className="border-t border-white/10">
-            <div className="flex flex-col gap-3 rounded-lg bg-slate-900/80 p-4 text-sm text-slate-100 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white shadow-inner shadow-black/10 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-wrap items-center gap-4">
-                <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
                   {plan.label}
                 </span>
                 <span className="flex items-center gap-2 text-xs sm:text-sm">
