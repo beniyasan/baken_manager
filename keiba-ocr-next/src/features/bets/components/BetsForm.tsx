@@ -41,6 +41,17 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
 
+const extractRaceNumber = (value: string | null | undefined) => {
+  if (!value) return null;
+  const match = value.match(/(\d{1,2})R/);
+  if (!match) return null;
+  const parsed = Number.parseInt(match[1], 10);
+  if (Number.isNaN(parsed) || parsed < 1 || parsed > 12) {
+    return null;
+  }
+  return parsed;
+};
+
 const INPUT_BASE_CLASS =
   "w-full rounded-md border border-white/15 bg-slate-950/50 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/30";
 const PRIMARY_BUTTON_CLASS =
@@ -455,10 +466,43 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
 
       const merged = mergeOcrResults(parsed, structured);
 
+      const normalizedTrack =
+        merged.track ?? (merged.raceName ? merged.raceName.match(/^(\S+)/)?.[1] ?? null : null);
+      const raceNumber = extractRaceNumber(merged.raceName ?? null);
+
+      let finalRaceName = merged.raceName ?? null;
+
+      if (merged.date && normalizedTrack && raceNumber) {
+        try {
+          const lookupResponse = await fetch("/api/races/lookup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              date: merged.date,
+              track: normalizedTrack,
+              raceNumber,
+            }),
+          });
+
+          if (lookupResponse.ok) {
+            const lookupResult = (await lookupResponse.json()) as { raceName?: string | null };
+            if (lookupResult?.raceName) {
+              finalRaceName = lookupResult.raceName;
+            }
+          } else {
+            const errorBody = await lookupResponse.json().catch(() => ({}));
+            console.warn("レース名取得に失敗", errorBody?.error ?? lookupResponse.statusText);
+          }
+        } catch (lookupError) {
+          console.warn("レース名取得 API 呼び出しエラー", lookupError);
+        }
+      }
+
       if (merged.date) setDate(merged.date);
       if (merged.source) setSource(merged.source);
-      if (merged.raceName) setRaceName(merged.raceName);
-      if (merged.track) setTrack(merged.track);
+      if (finalRaceName) setRaceName(finalRaceName);
+      if (normalizedTrack) setTrack(normalizedTrack);
       if (merged.payout !== undefined) setPayout(merged.payout);
       if (merged.memo) setMemo(merged.memo);
       if (merged.bets.length) setTickets(merged.bets.map((ticket) => ({ ...ticket })));
