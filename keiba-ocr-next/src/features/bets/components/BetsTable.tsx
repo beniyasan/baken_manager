@@ -1,11 +1,17 @@
 "use client";
 
 import { type ReactNode, useMemo } from "react";
+import type { BetRecord } from "@/lib/types";
 import { useBetsContext } from "./BetsProvider";
 
 const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
 
-export const BetsTable = () => {
+type BetsTableProps = {
+  onEdit?: (bet: BetRecord) => void;
+  showActions?: boolean;
+};
+
+export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTableProps) => {
   const { bets, loading, error } = useBetsContext();
 
   const { rows, totalRowCount } = useMemo(() => {
@@ -81,6 +87,17 @@ export const BetsTable = () => {
                 </span>
               </td>
             )}
+            {isFirstTicket && showActions && (
+              <td className="whitespace-nowrap px-4 py-3 text-right" rowSpan={rowSpan}>
+                <button
+                  type="button"
+                  onClick={() => onEdit?.(bet)}
+                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-1 text-xs font-medium text-white transition hover:border-emerald-300/50 hover:text-emerald-200"
+                >
+                  編集
+                </button>
+              </td>
+            )}
           </tr>
         );
 
@@ -89,7 +106,7 @@ export const BetsTable = () => {
     });
 
     return { rows: renderedRows, totalRowCount: rowIndex };
-  }, [bets]);
+  }, [bets, onEdit, showActions]);
 
   if (loading) {
     return (
@@ -148,6 +165,11 @@ export const BetsTable = () => {
               <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-medium">
                 回収率
               </th>
+              {showActions && (
+                <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-medium">
+                  操作
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
