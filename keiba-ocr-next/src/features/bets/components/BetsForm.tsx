@@ -250,7 +250,11 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
 
     const loadUsage = async () => {
       try {
-        const response = await fetch("/api/ocr/usage", { method: "GET", cache: "no-store" });
+        const response = await fetch("/api/ocr/usage", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
         if (!response.ok) {
           return;
         }
@@ -445,6 +449,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
       const response = await fetch("/api/vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ imageData: base64Image }),
       });
 
@@ -474,6 +479,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
         const structuredResponse = await fetch("/api/ocr/structure", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ text }),
         });
         if (structuredResponse.ok) {

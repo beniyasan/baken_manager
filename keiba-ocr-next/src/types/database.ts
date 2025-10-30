@@ -212,15 +212,12 @@ export type Database = {
     };
     Functions: {
       consume_ocr_credit: {
-        Args: {
-          target_user: string;
-          target_month: string;
-          usage_limit?: number | null;
-        };
-        Returns: {
-          success: boolean;
-          usage_count: number;
-        }[];
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      get_auth_uid_or_null: {
+        Args: Record<PropertyKey, never>;
+        Returns: string | null;
       };
     };
     Enums: {
