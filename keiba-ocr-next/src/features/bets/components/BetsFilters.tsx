@@ -30,7 +30,7 @@ export const BetsFilters = () => {
     hasActiveFilters,
   } = useBetsContext();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const selectedTracks = useMemo(() => new Set(filters.tracks), [filters.tracks]);
 
