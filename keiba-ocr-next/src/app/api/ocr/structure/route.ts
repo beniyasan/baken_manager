@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
-import {
-  createSupabaseRouteClient,
-  isMissingSupabaseEnvError,
-} from "@/lib/supabaseRouteClient";
+import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 
 export const runtime = "nodejs";
 
@@ -17,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "テキストが無効です" }, { status: 400 });
     }
 
-    const supabase = await createSupabaseRouteClient();
+    const supabase = createSupabaseRouteClient();
     const {
       data: { user },
       error: authError,
@@ -114,7 +111,8 @@ export async function POST(request: NextRequest) {
     try {
       const fencedMatch = contentRaw.match(/```(?:json)?\s*([\s\S]*?)```/i);
       const content = fencedMatch ? fencedMatch[1] : contentRaw;
-      const trimmed = content.trim()
+      const trimmed = content
+        .trim()
         .replace(/^```(?:json)?/i, "")
         .replace(/```$/, "")
         .trim();
@@ -127,9 +125,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(structured);
   } catch (error) {
     console.error("Perplexity 呼び出しエラー", error);
-    if (isMissingSupabaseEnvError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

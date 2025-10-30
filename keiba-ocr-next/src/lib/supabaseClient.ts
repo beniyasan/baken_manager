@@ -1,32 +1,12 @@
-import { createClient, type SupabaseClient as BaseSupabaseClient } from "@supabase/supabase-js";
+"use client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-const missingEnvMessage =
-  "Supabase URL または anon key が設定されていません。環境変数を確認してください。";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const createMissingEnvProxy = (): BaseSupabaseClient => {
-  const error = new Error(missingEnvMessage);
-  return new Proxy({} as BaseSupabaseClient, {
-    get() {
-      throw error;
-    },
-    apply() {
-      throw error;
-    },
-  });
-};
+import type { Database } from "@/types/database";
 
-export const supabaseClient: BaseSupabaseClient =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      })
-    : createMissingEnvProxy();
+export const supabaseClient =
+  createClientComponentClient<Database>() as unknown as SupabaseClient<Database>;
 
-export type SupabaseClient = typeof supabaseClient;
+export const getSupabaseBrowserClient = () => supabaseClient;
