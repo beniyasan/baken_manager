@@ -56,7 +56,7 @@ const pricingPlans = [
 
 const commonFeatures = [
   "撮影した馬券のAI OCR解析",
-  "Supabaseベースの安全なデータ保管",
+  "信頼性の高いデータベースへの安全な保管",
   "回収率・傾向を把握できるダッシュボード",
 ];
 
@@ -266,7 +266,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-2xl space-y-6">
             <h2 className="text-3xl font-bold text-white md:text-4xl">今すぐ自動化された馬券管理を体験</h2>
             <p className="text-lg text-slate-100">
-              SupabaseとAI OCRを組み合わせたダッシュボードで、馬券管理の手間をゼロに。無料プランで今すぐ始められます。
+              高機能なデータベースとAI OCRを組み合わせたダッシュボードで、馬券管理の手間をゼロに。無料プランで今すぐ始められます。
             </p>
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <Link

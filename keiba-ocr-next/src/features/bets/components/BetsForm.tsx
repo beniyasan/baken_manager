@@ -697,7 +697,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
             ファイルを選択
           </button>
           <p className="mt-2 text-xs text-slate-300">
-            クリックまたはドラッグ＆ドロップで画像を選択できます。画像は Supabase Storage に保存されます。
+            クリックまたはドラッグ＆ドロップで画像を選択できます。画像はアプリのデータベースストレージに保存されます。
           </p>
           {imagePreview && (
             <div className="mt-4 overflow-hidden rounded-lg border border-white/15 bg-slate-950/40">
