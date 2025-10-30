@@ -442,65 +442,67 @@ export default function DashboardPage() {
         onOpenPasswordChange={handleOpenPasswordModal}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
-            <CardHeader className="border-white/10">
-              <CardTitle className="text-base font-semibold text-emerald-200">ステータス</CardTitle>
-              <CardDescription className="text-xs text-slate-300">
-                現在のログイン状況とOCRの概要。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
-              <CloudArrowUpIcon className="h-10 w-10 text-emerald-300" />
-              <div>
-                <p className="font-semibold text-white">OCR & データベース連携</p>
-                <p className="text-slate-300">{accountLabel}</p>
-                {planEnforced ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-emerald-200">
-                    <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 font-semibold uppercase tracking-[0.25em]">
-                      現在のプラン
-                    </span>
-                    <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em]">
-                      {plan.label}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-xs text-slate-400">ログインしてプラン情報を確認しましょう。</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
-            <CardHeader className="border-white/10">
-              <CardTitle className="text-base font-semibold text-emerald-200">OCR解析</CardTitle>
-              <CardDescription className="text-xs text-slate-300">
-                画像アップロードから自動で入力を支援します。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
-              <BuildingStorefrontIcon className="h-10 w-10 text-emerald-300" />
-              <div>
-                <p className="font-semibold text-white">Vision API + Perplexity で補助解析</p>
-                <p className="text-slate-300">買い目や払戻も自動抽出します。</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
-            <CardHeader className="border-white/10">
-              <CardTitle className="text-base font-semibold text-emerald-200">統計と可視化</CardTitle>
-              <CardDescription className="text-xs text-slate-300">
-                月別推移や競馬場別の傾向をリアルタイム更新。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center gap-3 text-sm text-slate-200">
-              <TrophyIcon className="h-10 w-10 text-emerald-300" />
-              <div>
-                <p className="font-semibold text-white">モダンなチャートで動向を把握</p>
-                <p className="text-slate-300">購入元別の回収率なども即時確認。</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {!currentUser && (
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+              <CardHeader className="border-white/10">
+                <CardTitle className="text-base font-semibold text-emerald-200">ステータス</CardTitle>
+                <CardDescription className="text-xs text-slate-300">
+                  現在のログイン状況とOCRの概要。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+                <CloudArrowUpIcon className="h-10 w-10 text-emerald-300" />
+                <div>
+                  <p className="font-semibold text-white">OCR & データベース連携</p>
+                  <p className="text-slate-300">{accountLabel}</p>
+                  {planEnforced ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-emerald-200">
+                      <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 font-semibold uppercase tracking-[0.25em]">
+                        現在のプラン
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em]">
+                        {plan.label}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400">ログインしてプラン情報を確認しましょう。</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+              <CardHeader className="border-white/10">
+                <CardTitle className="text-base font-semibold text-emerald-200">OCR解析</CardTitle>
+                <CardDescription className="text-xs text-slate-300">
+                  画像アップロードから自動で入力を支援します。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+                <BuildingStorefrontIcon className="h-10 w-10 text-emerald-300" />
+                <div>
+                  <p className="font-semibold text-white">Vision API + Perplexity で補助解析</p>
+                  <p className="text-slate-300">買い目や払戻も自動抽出します。</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
+              <CardHeader className="border-white/10">
+                <CardTitle className="text-base font-semibold text-emerald-200">統計と可視化</CardTitle>
+                <CardDescription className="text-xs text-slate-300">
+                  月別推移や競馬場別の傾向をリアルタイム更新。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center gap-3 text-sm text-slate-200">
+                <TrophyIcon className="h-10 w-10 text-emerald-300" />
+                <div>
+                  <p className="font-semibold text-white">モダンなチャートで動向を把握</p>
+                  <p className="text-slate-300">購入元別の回収率なども即時確認。</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {GuardContent}
       </main>
