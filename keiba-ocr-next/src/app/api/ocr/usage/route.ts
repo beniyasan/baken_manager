@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { buildUsageSnapshot, getUsageMonthKey } from "@/lib/ocrUsage";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
+import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -66,6 +67,34 @@ export async function GET() {
     return NextResponse.json(usageSnapshot);
   } catch (error) {
     console.error("OCR利用状況取得APIエラー", error);
+    return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
+  }
+}
+
+export async function POST(_request: NextRequest) {
+  try {
+    const supabase = createSupabaseRouteClient();
+
+    const { data: who, error: whoError } = await supabase.rpc("get_auth_uid_or_null");
+    if (whoError) {
+      console.error("auth.uid() diagnostic failed", whoError);
+    }
+    console.log("auth.uid() on server:", who ?? null);
+
+    const { data, error } = await supabase.rpc("consume_ocr_credit");
+
+    if (error) {
+      console.error("consume_ocr_credit failed", error);
+      return NextResponse.json({ error: "OCR利用回数の更新に失敗しました" }, { status: 500 });
+    }
+
+    if (data === false) {
+      return NextResponse.json({ error: "FREEプランの月次上限に達しました" }, { status: 402 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("OCR利用回数更新APIエラー", error);
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

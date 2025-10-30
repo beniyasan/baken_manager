@@ -143,23 +143,31 @@ export async function POST(request: NextRequest) {
     let nextUsageSnapshot: OcrUsageSnapshot | null = usageSnapshot;
 
     if (plan.ocrMonthlyLimit !== null) {
-      const { data: consumeData, error: consumeError } = await supabase.rpc("consume_ocr_credit", {
-        target_user: user.id,
-        target_month: usageMonth,
-        usage_limit: plan.ocrMonthlyLimit,
-      });
+      const { data: consumeResult, error: consumeError } = await supabase.rpc("consume_ocr_credit");
 
       if (consumeError) {
         console.error("OCR利用回数の更新に失敗", consumeError);
         return NextResponse.json({ error: "OCR利用回数の更新に失敗しました" }, { status: 500 });
       }
 
-      const consumeResult = Array.isArray(consumeData) ? consumeData[0] : consumeData;
+      const { data: updatedUsageRow, error: updatedUsageError } = await supabase
+        .from("ocr_usage_monthly")
+        .select("usage_count")
+        .eq("user_id", user.id)
+        .eq("usage_month", usageMonth)
+        .maybeSingle();
 
-      if (!consumeResult?.success) {
+      if (updatedUsageError) {
+        console.error("OCR利用状況の再取得に失敗", updatedUsageError);
+      }
+
+      const updatedUsageCount =
+        updatedUsageRow?.usage_count ?? (consumeResult ? currentUsageCount + 1 : currentUsageCount);
+
+      if (consumeResult === false) {
         nextUsageSnapshot = buildUsageSnapshot({
           limit: plan.ocrMonthlyLimit,
-          used: consumeResult?.usage_count ?? plan.ocrMonthlyLimit,
+          used: updatedUsageCount,
         });
 
         return NextResponse.json(
@@ -173,7 +181,7 @@ export async function POST(request: NextRequest) {
 
       nextUsageSnapshot = buildUsageSnapshot({
         limit: plan.ocrMonthlyLimit,
-        used: consumeResult?.usage_count ?? currentUsageCount + 1,
+        used: updatedUsageCount,
       });
     }
 
