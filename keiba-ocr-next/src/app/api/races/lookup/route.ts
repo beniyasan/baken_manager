@@ -84,17 +84,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "PERPLEXITY_API_KEY が設定されていません" }, { status: 500 });
     }
 
+    const japaneseDate = (() => {
+      const [year, month, day] = date.split("-");
+      return `${year}年${Number.parseInt(month, 10)}月${Number.parseInt(day, 10)}日`;
+    })();
+
+    const trackForPrompt = /(?:競馬場|場)$/.test(track) ? track : `${track}競馬場`;
+
     const prompt = [
-      "以下の条件に該当する日本の競馬レース名を特定してください。",
-      `- 日付: ${date}`,
-      `- 競馬場: ${track}`,
-      `- レース番号: ${parsedRaceNumber}R`,
-      "同日に同じ競馬場で開催されたレースの正式名称を、過去の公表情報を参考にして回答してください。",
+      "以下の開催情報に基づいて、日本の公式競馬レース名（重賞・特別を含む）を特定してください。",
+      `- 開催日: ${japaneseDate} (ISO: ${date})`,
+      `- 開催場: ${trackForPrompt}`,
+      `- 競走番号: 第${parsedRaceNumber}競走 (${parsedRaceNumber}R)`,
+      "過去の開催結果や番組表など、公的に公開されている情報を参照して正確なレース名を回答してください。",
       "出力要件:",
-      "- JSON でのみ回答し、次の形式に従ってください: {\"raceName\": string | null}.",
-      `- レース名が判明した場合は、末尾に (${parsedRaceNumber}R) を付与してください。`,
-      "- 判明しない場合や情報が存在しない場合は raceName を null にしてください。",
-      "- 推測で存在しない名称を作成しないでください。",
+      "1. JSON のみで回答し、形式は {\"raceName\": string | null} とします。",
+      "2. レース名が特定できた場合は末尾に全角括弧で (${parsedRaceNumber}R) を付与してください。",
+      "3. 公的な情報が存在しない場合や特定できない場合のみ raceName を null としてください。",
+      "4. 事実と異なる名称を推測で生成しないでください。",
+      "参考出力例: {\"raceName\": \"東京記念(11R)\"}",
     ].join("\n");
 
     const payload = {
@@ -149,7 +157,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Perplexity 応答の JSON 解析に失敗しました" }, { status: 500 });
     }
 
-    return NextResponse.json({ raceName: parsed?.raceName ?? null });
+    const raceName = parsed?.raceName ?? null;
+    const normalizedRaceName = (() => {
+      if (!raceName) return null;
+      const suffix = `(${parsedRaceNumber}R)`;
+      return raceName.endsWith(suffix) ? raceName : `${raceName}${suffix}`;
+    })();
+
+    return NextResponse.json({ raceName: normalizedRaceName });
   } catch (error) {
     console.error("レース名取得 API エラー", error);
     return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
