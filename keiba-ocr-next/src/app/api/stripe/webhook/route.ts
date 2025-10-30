@@ -15,6 +15,17 @@ const PROFILE_COLUMNS =
 
 type AdminClient = SupabaseClient<Database>;
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type ProfileRecord = Pick<
+  ProfileRow,
+  | "id"
+  | "user_role"
+  | "stripe_customer_id"
+  | "stripe_subscription_id"
+  | "stripe_price_id"
+  | "subscription_status"
+  | "current_period_end"
+  | "cancel_at_period_end"
+>;
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type UserRole = Database["public"]["Enums"]["user_role"];
 
@@ -71,7 +82,7 @@ const determineNextRole = (
   return "free";
 };
 
-const fetchProfileById = async (supabase: AdminClient, userId: string): Promise<ProfileRow | null> => {
+const fetchProfileById = async (supabase: AdminClient, userId: string): Promise<ProfileRecord | null> => {
   const { data, error } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
@@ -88,7 +99,7 @@ const fetchProfileById = async (supabase: AdminClient, userId: string): Promise<
 const fetchProfileByCustomerId = async (
   supabase: AdminClient,
   customerId: string,
-): Promise<ProfileRow | null> => {
+): Promise<ProfileRecord | null> => {
   const { data, error } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
@@ -106,7 +117,7 @@ const resolveProfileForCustomer = async (
   supabase: AdminClient,
   stripe: Stripe,
   customerId: string,
-): Promise<ProfileRow | null> => {
+): Promise<ProfileRecord | null> => {
   const profile = await fetchProfileByCustomerId(supabase, customerId);
 
   if (profile) {
@@ -133,7 +144,7 @@ const fetchSubscription = async (stripe: Stripe, subscriptionId: string): Promis
 
 const applySubscriptionUpdate = async (
   supabase: AdminClient,
-  profile: ProfileRow,
+  profile: ProfileRecord,
   params: {
     userId: string;
     customerId?: string | null;
