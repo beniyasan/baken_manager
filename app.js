@@ -32,7 +32,7 @@ const trackOptions = [
 const PLAN_FEATURES = {
     free: {
         label: 'フリープラン',
-        maxBets: 200,
+        maxBets: null,
         ocrEnabled: false,
         aiAssistEnabled: false
     },

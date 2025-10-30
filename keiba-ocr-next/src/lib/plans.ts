@@ -29,7 +29,7 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
   free: {
     role: "free",
     label: "フリープラン",
-    maxBets: 200,
+    maxBets: null,
     ocrEnabled: true,
     ocrMonthlyLimit: 10,
     ocrUsageLabel: "月10回まで",
