@@ -10,6 +10,7 @@ import { BetsProvider, useBetsContext } from "@/features/bets/components/BetsPro
 import { BetsForm } from "@/features/bets/components/BetsForm";
 import { BetsFilters } from "@/features/bets/components/BetsFilters";
 import { BetsFilteredSummary } from "@/features/bets/components/BetsFilteredSummary";
+import { BetsExportButton } from "@/features/bets/components/BetsExportButton";
 import { BetsTable } from "@/features/bets/components/BetsTable";
 import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
 import type { BetRecord } from "@/lib/types";
@@ -68,7 +69,14 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
   return (
     <div className="flex flex-col gap-6">
       <BetsFilters />
-      <BetsFilteredSummary />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <BetsFilteredSummary />
+        </div>
+        <div className="sm:ml-4 sm:self-start">
+          <BetsExportButton />
+        </div>
+      </div>
       <BetsTable onEdit={handleEdit} onDelete={handleDelete} showActions />
       <div ref={formContainerRef} className="scroll-mt-24">
         {formVisible ? (
