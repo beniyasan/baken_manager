@@ -69,9 +69,10 @@ export type BetsFormProps = {
   onSuccess: () => void;
   plan: PlanFeatures;
   planEnforced: boolean;
+  onUpgrade?: () => void | Promise<void>;
 };
 
-export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforced }: BetsFormProps) => {
+export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforced, onUpgrade }: BetsFormProps) => {
   const { addBet, updateBet, bets } = useBetsContext();
 
   const [date, setDate] = useState<string>(today());
@@ -92,6 +93,20 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
   const [ocrUsage, setOcrUsage] = useState<OcrUsageSnapshot | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleUpgradeClick = async () => {
+    if (!onUpgrade || upgradeLoading) return;
+
+    try {
+      setUpgradeLoading(true);
+      await onUpgrade();
+    } catch (error) {
+      console.error("プレミアムアップグレード処理中にエラーが発生しました", error);
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!editingBet) {
@@ -739,15 +754,15 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
           {ocrDisabled && (
             <div className="mt-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
               <p>{ocrLimitExceeded ? FEATURE_MESSAGES.ocrLimitReached : FEATURE_MESSAGES.ocrDisabled}</p>
-              {!ocrLimitExceeded && plan.upgradeUrl && (
-                <a
-                  href={plan.upgradeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-flex text-amber-200 underline decoration-dotted underline-offset-4 hover:text-amber-100"
+              {!ocrLimitExceeded && plan.canUpgrade && onUpgrade && (
+                <button
+                  type="button"
+                  onClick={handleUpgradeClick}
+                  disabled={upgradeLoading}
+                  className="mt-1 inline-flex text-amber-200 underline decoration-dotted underline-offset-4 hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   アップグレードの詳細を見る
-                </a>
+                </button>
               )}
             </div>
           )}
@@ -772,15 +787,15 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
           {limitReached && plan.maxBets !== null && (
             <p className="mt-1">
               {FEATURE_MESSAGES.maxBets(plan.maxBets)}
-              {plan.upgradeUrl && (
-                <a
-                  href={plan.upgradeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-2 text-emerald-200 underline decoration-dotted underline-offset-4 hover:text-emerald-100"
+              {plan.canUpgrade && onUpgrade && (
+                <button
+                  type="button"
+                  onClick={handleUpgradeClick}
+                  disabled={upgradeLoading}
+                  className="ml-2 text-emerald-200 underline decoration-dotted underline-offset-4 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   アップグレードはこちら
-                </a>
+                </button>
               )}
             </p>
           )}

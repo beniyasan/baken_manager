@@ -12,6 +12,7 @@ export type HeaderProps = {
   onLogout: () => void;
   onOpenProfile?: () => void;
   onOpenPasswordChange?: () => void;
+  onUpgrade?: () => void | Promise<void>;
 };
 
 const getDisplayName = (user: User | null) => {
@@ -28,11 +29,13 @@ export const Header = ({
   onLogout,
   onOpenProfile,
   onOpenPasswordChange,
+  onUpgrade,
 }: HeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const displayName = accountName ?? getDisplayName(user);
   const isFreePlan = plan?.role === "free";
+  const canUpgrade = isFreePlan && Boolean(onUpgrade);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -126,15 +129,17 @@ export const Header = ({
                       パスワードを変更
                     </button>
                   )}
-                  {isFreePlan && plan?.upgradeUrl && (
-                    <a
-                      href={plan.upgradeUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                  {canUpgrade && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void onUpgrade?.();
+                      }}
                       className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-emerald-200 hover:bg-white/10"
                     >
                       プレミアムにアップグレード
-                    </a>
+                    </button>
                   )}
                   <div className="my-1 border-t border-white/10" />
                   <button

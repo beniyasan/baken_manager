@@ -106,20 +106,38 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          current_period_end: string | null;
           display_name: string | null;
           id: string;
+          stripe_customer_id: string | null;
+          stripe_price_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_status: string | null;
+          cancel_at_period_end: boolean | null;
           user_role: Database["public"]["Enums"]["user_role"];
         };
         Insert: {
           created_at?: string;
+          current_period_end?: string | null;
           display_name?: string | null;
           id: string;
+          stripe_customer_id?: string | null;
+          stripe_price_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: string | null;
+          cancel_at_period_end?: boolean | null;
           user_role?: Database["public"]["Enums"]["user_role"];
         };
         Update: {
           created_at?: string;
+          current_period_end?: string | null;
           display_name?: string | null;
           id?: string;
+          stripe_customer_id?: string | null;
+          stripe_price_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: string | null;
+          cancel_at_period_end?: boolean | null;
           user_role?: Database["public"]["Enums"]["user_role"];
         };
         Relationships: [
@@ -131,6 +149,33 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      stripe_event_log: {
+        Row: {
+          event_id: string;
+          note: string | null;
+          ok: boolean | null;
+          processed_at: string | null;
+          received_at: string;
+          type: string;
+        };
+        Insert: {
+          event_id: string;
+          note?: string | null;
+          ok?: boolean | null;
+          processed_at?: string | null;
+          received_at?: string;
+          type: string;
+        };
+        Update: {
+          event_id?: string;
+          note?: string | null;
+          ok?: boolean | null;
+          processed_at?: string | null;
+          received_at?: string;
+          type?: string;
+        };
+        Relationships: [];
       };
       stats_cache: {
         Row: {
