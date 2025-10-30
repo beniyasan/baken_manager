@@ -20,7 +20,7 @@ type BetsManagementContentProps = {
 };
 
 const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProps) => {
-  const { fetchBets } = useBetsContext();
+  const { fetchBets, deleteBet } = useBetsContext();
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [formVisible, setFormVisible] = useState(false);
   const formContainerRef = useRef<HTMLDivElement | null>(null);
@@ -41,6 +41,25 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
     setFormVisible(false);
   }, [fetchBets]);
 
+  const handleDelete = useCallback(
+    async (bet: BetRecord) => {
+      const confirmed = window.confirm("選択した馬券を削除しますか？");
+      if (!confirmed) return;
+
+      try {
+        await deleteBet(bet.id, bet.imagePath);
+        if (editingBet?.id === bet.id) {
+          setEditingBet(null);
+          setFormVisible(false);
+        }
+      } catch (error) {
+        console.error("馬券削除エラー", error);
+        window.alert("削除に失敗しました。時間をおいて再度お試しください。");
+      }
+    },
+    [deleteBet, editingBet?.id],
+  );
+
   useEffect(() => {
     if (!formVisible) return;
     formContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -50,7 +69,7 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
     <div className="flex flex-col gap-6">
       <BetsFilters />
       <BetsFilteredSummary />
-      <BetsTable onEdit={handleEdit} showActions />
+      <BetsTable onEdit={handleEdit} onDelete={handleDelete} showActions />
       <div ref={formContainerRef} className="scroll-mt-24">
         {formVisible ? (
           <BetsForm
