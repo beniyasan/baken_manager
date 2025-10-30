@@ -6,9 +6,62 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
 import { supabaseClient } from "@/lib/supabaseClient";
-import { BetsProvider } from "@/features/bets/components/BetsProvider";
+import { BetsProvider, useBetsContext } from "@/features/bets/components/BetsProvider";
 import { BetsTable } from "@/features/bets/components/BetsTable";
+import { BetsForm } from "@/features/bets/components/BetsForm";
 import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
+import type { BetRecord } from "@/lib/types";
+
+type BetsManagementContentProps = {
+  plan: PlanFeatures;
+  planEnforced: boolean;
+};
+
+const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProps) => {
+  const { fetchBets } = useBetsContext();
+  const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
+
+  const handleEdit = useCallback((bet: BetRecord) => {
+    setEditingBet(bet);
+    setFormVisible(true);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingBet(null);
+    setFormVisible(false);
+  }, []);
+
+  const handleSuccess = useCallback(async () => {
+    await fetchBets();
+    setEditingBet(null);
+    setFormVisible(false);
+  }, [fetchBets]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <BetsTable onEdit={handleEdit} showActions />
+      {formVisible ? (
+        <BetsForm
+          editingBet={editingBet}
+          onCancelEdit={handleCancelEdit}
+          onSuccess={handleSuccess}
+          plan={plan}
+          planEnforced={planEnforced}
+        />
+      ) : (
+        <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-500/5 p-6 text-sm text-slate-200 shadow-xl shadow-emerald-500/10">
+          <h2 className="text-base font-semibold text-emerald-200">操作ガイド</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-slate-100">
+            <li>テーブルの「編集」ボタンを押すと、該当する馬券の編集フォームが開きます。</li>
+            <li>内容を更新して保存すると一覧が自動的に最新の状態へ更新されます。</li>
+            <li>編集をやめる場合はフォーム内の「キャンセル」を押してください。</li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function BetsManagementPage() {
   const router = useRouter();
@@ -126,6 +179,8 @@ export default function BetsManagementPage() {
     return null;
   }
 
+  const planEnforced = Boolean(user);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <Header
@@ -175,7 +230,7 @@ export default function BetsManagementPage() {
         </section>
 
         <BetsProvider>
-          <BetsTable />
+          <BetsManagementContent plan={plan} planEnforced={planEnforced} />
         </BetsProvider>
       </main>
     </div>
