@@ -10,7 +10,7 @@ export type PlanFeatures = {
   ocrMonthlyLimit: number | null;
   ocrUsageLabel: string;
   aiAssistEnabled: boolean;
-  upgradeUrl?: string;
+  canUpgrade: boolean;
 };
 
 export type ProfileRow = {
@@ -34,7 +34,7 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     ocrMonthlyLimit: 10,
     ocrUsageLabel: "月10回まで",
     aiAssistEnabled: false,
-    upgradeUrl: "/#pricing",
+    canUpgrade: true,
   },
   premium: {
     role: "premium",
@@ -44,6 +44,7 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     ocrMonthlyLimit: null,
     ocrUsageLabel: "無制限",
     aiAssistEnabled: true,
+    canUpgrade: false,
   },
   admin: {
     role: "admin",
@@ -53,6 +54,7 @@ export const PLAN_FEATURES: Record<UserRole, PlanFeatures> = {
     ocrMonthlyLimit: null,
     ocrUsageLabel: "無制限",
     aiAssistEnabled: true,
+    canUpgrade: false,
   },
 };
 

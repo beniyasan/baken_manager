@@ -15,6 +15,7 @@ import type { Database } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { type CurrentProfile, type PlanFeatures, getAccountLabel, normalizeProfile, resolvePlan } from "@/lib/plans";
+import { redirectToPremiumCheckout } from "@/lib/premiumCheckout";
 
 const AUTH_HINTS:
   | Record<
@@ -82,6 +83,15 @@ export default function DashboardPage() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
+
+  const handlePremiumUpgrade = useCallback(async () => {
+    try {
+      await redirectToPremiumCheckout();
+    } catch (error) {
+      console.error("プレミアム決済ページの開始に失敗しました", error);
+      showToast("プレミアム決済ページの読み込みに失敗しました。時間をおいて再度お試しください。", "error");
+    }
+  }, [showToast]);
 
   useEffect(() => {
     let active = true;
@@ -405,7 +415,12 @@ export default function DashboardPage() {
 
   const GuardContent = currentUser ? (
     <BetsProvider>
-      <DashboardArea onSignOut={handleSignOut} plan={plan} planEnforced={planEnforced} />
+      <DashboardArea
+        onSignOut={handleSignOut}
+        plan={plan}
+        planEnforced={planEnforced}
+        onUpgrade={handlePremiumUpgrade}
+      />
     </BetsProvider>
   ) : (
     <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-white/20 bg-slate-900/60 p-10 text-center shadow-xl shadow-emerald-500/10">
@@ -440,6 +455,7 @@ export default function DashboardPage() {
         onLogout={handleSignOut}
         onOpenProfile={handleOpenProfileModal}
         onOpenPasswordChange={handleOpenPasswordModal}
+        onUpgrade={handlePremiumUpgrade}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         {!currentUser && (
@@ -792,13 +808,28 @@ type DashboardAreaProps = {
   onSignOut: () => void;
   plan: PlanFeatures;
   planEnforced: boolean;
+  onUpgrade?: () => void | Promise<void>;
 };
 
-function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
+function DashboardArea({ onSignOut, plan, planEnforced, onUpgrade }: DashboardAreaProps) {
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [showForm, setShowForm] = useState(true);
   const { deleteBet, fetchBets } = useBetsContext();
   const formSectionRef = useRef<HTMLDivElement | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleUpgradeClick = async () => {
+    if (!onUpgrade || upgradeLoading) return;
+
+    try {
+      setUpgradeLoading(true);
+      await onUpgrade();
+    } catch (error) {
+      console.error("プレミアムアップグレード処理の開始に失敗しました", error);
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   const handleEdit = (bet: BetRecord) => {
     setEditingBet(bet);
@@ -872,15 +903,15 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
                   </span>
                 </span>
               </div>
-              {!plan.ocrEnabled && plan.upgradeUrl && (
-                <a
-                  href={plan.upgradeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center rounded-full border border-emerald-300/40 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:border-emerald-200 hover:text-emerald-100"
+              {!plan.ocrEnabled && plan.canUpgrade && onUpgrade && (
+                <button
+                  type="button"
+                  onClick={handleUpgradeClick}
+                  disabled={upgradeLoading}
+                  className="inline-flex items-center justify-center rounded-full border border-emerald-300/40 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:border-emerald-200 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   プレミアムにアップグレード
-                </a>
+                </button>
               )}
             </div>
           </CardContent>
@@ -895,6 +926,7 @@ function DashboardArea({ onSignOut, plan, planEnforced }: DashboardAreaProps) {
             onSuccess={handleSuccess}
             plan={plan}
             planEnforced={planEnforced}
+            onUpgrade={onUpgrade}
           />
         </div>
       )}

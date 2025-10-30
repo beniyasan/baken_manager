@@ -13,14 +13,16 @@ import { BetsFilteredSummary } from "@/features/bets/components/BetsFilteredSumm
 import { BetsExportButton } from "@/features/bets/components/BetsExportButton";
 import { BetsTable } from "@/features/bets/components/BetsTable";
 import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
+import { redirectToPremiumCheckout } from "@/lib/premiumCheckout";
 import type { BetRecord } from "@/lib/types";
 
 type BetsManagementContentProps = {
   plan: PlanFeatures;
   planEnforced: boolean;
+  onUpgrade?: () => void | Promise<void>;
 };
 
-const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProps) => {
+const BetsManagementContent = ({ plan, planEnforced, onUpgrade }: BetsManagementContentProps) => {
   const { fetchBets, deleteBet } = useBetsContext();
   const [editingBet, setEditingBet] = useState<BetRecord | null>(null);
   const [formVisible, setFormVisible] = useState(false);
@@ -86,6 +88,7 @@ const BetsManagementContent = ({ plan, planEnforced }: BetsManagementContentProp
             onSuccess={handleSuccess}
             plan={plan}
             planEnforced={planEnforced}
+            onUpgrade={onUpgrade}
           />
         ) : (
           <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-500/5 p-6 text-sm text-slate-200 shadow-xl shadow-emerald-500/10">
@@ -204,6 +207,15 @@ export default function BetsManagementPage() {
     }
   }, [router]);
 
+  const handlePremiumUpgrade = useCallback(async () => {
+    try {
+      await redirectToPremiumCheckout();
+    } catch (error) {
+      console.error("プレミアム決済ページの開始に失敗しました", error);
+      window.alert("プレミアム決済ページの読み込みに失敗しました。時間をおいて再度お試しください。");
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -228,6 +240,7 @@ export default function BetsManagementPage() {
         plan={user ? plan : undefined}
         onLogin={() => router.push("/dashboard")}
         onLogout={handleSignOut}
+        onUpgrade={handlePremiumUpgrade}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <section className="rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-xl shadow-emerald-500/10">
@@ -269,7 +282,7 @@ export default function BetsManagementPage() {
         </section>
 
         <BetsProvider>
-          <BetsManagementContent plan={plan} planEnforced={planEnforced} />
+          <BetsManagementContent plan={plan} planEnforced={planEnforced} onUpgrade={handlePremiumUpgrade} />
         </BetsProvider>
       </main>
     </div>
