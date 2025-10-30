@@ -8,10 +8,15 @@ const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
 
 type BetsTableProps = {
   onEdit?: (bet: BetRecord) => void;
+  onDelete?: (bet: BetRecord) => void;
   showActions?: boolean;
 };
 
-export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTableProps) => {
+export const BetsTable = ({
+  onEdit,
+  onDelete,
+  showActions = Boolean(onEdit) || Boolean(onDelete),
+}: BetsTableProps) => {
   const { bets, filteredBets, loading, error, hasActiveFilters } = useBetsContext();
 
   const { rows, totalRowCount } = useMemo(() => {
@@ -89,13 +94,26 @@ export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTablePr
             )}
             {isFirstTicket && showActions && (
               <td className="whitespace-nowrap px-4 py-3 text-right" rowSpan={rowSpan}>
-                <button
-                  type="button"
-                  onClick={() => onEdit?.(bet)}
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-1 text-xs font-medium text-white transition hover:border-emerald-300/50 hover:text-emerald-200"
-                >
-                  編集
-                </button>
+                <div className="flex items-center justify-end gap-2">
+                  {onEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(bet)}
+                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-1 text-xs font-medium text-white transition hover:border-emerald-300/50 hover:text-emerald-200"
+                    >
+                      編集
+                    </button>
+                  ) : null}
+                  {onDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(bet)}
+                      className="inline-flex items-center justify-center rounded-full border border-rose-400/60 px-4 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-500/10"
+                    >
+                      削除
+                    </button>
+                  ) : null}
+                </div>
               </td>
             )}
           </tr>
@@ -106,7 +124,7 @@ export const BetsTable = ({ onEdit, showActions = Boolean(onEdit) }: BetsTablePr
     });
 
     return { rows: renderedRows, totalRowCount: rowIndex };
-  }, [filteredBets, onEdit, showActions]);
+  }, [filteredBets, onDelete, onEdit, showActions]);
 
   if (loading) {
     return (
