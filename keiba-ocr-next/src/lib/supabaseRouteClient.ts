@@ -1,10 +1,9 @@
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { debugLog, safePrefix } from "./debug";
 import type { Database } from "@/types/database";
 
-export function createSupabaseRouteClient(): SupabaseClient<Database> {
+export function createSupabaseRouteClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url) throw new Error("Missing env: NEXT_PUBLIC_SUPABASE_URL");
