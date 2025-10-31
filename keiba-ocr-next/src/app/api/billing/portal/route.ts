@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/stripe";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
@@ -9,13 +9,12 @@ import type { Database } from "@/types/database";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const appBaseUrl = process.env.APP_BASE_URL;
+    const appBaseUrl = process.env.APP_BASE_URL ?? new URL(request.url).origin;
 
-    if (!appBaseUrl) {
-      console.error("APP_BASE_URL が設定されていません");
-      return NextResponse.json({ error: "課金設定が正しく構成されていません" }, { status: 500 });
+    if (!process.env.APP_BASE_URL) {
+      debugLog("portal APP_BASE_URL missing; falling back to request origin", { appBaseUrl });
     }
 
     const supabase = createSupabaseRouteClient();
