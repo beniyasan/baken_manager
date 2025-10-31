@@ -99,7 +99,6 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
   const [ocrUsage, setOcrUsage] = useState<OcrUsageSnapshot | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const backCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const frontCameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
@@ -794,14 +793,6 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
             className="hidden"
             ref={backCameraInputRef}
           />
-          <input
-            type="file"
-            accept="image/*"
-            capture="user"
-            onChange={handleImageSelect}
-            className="hidden"
-            ref={frontCameraInputRef}
-          />
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -817,14 +808,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
                   onClick={() => backCameraInputRef.current?.click()}
                   className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
                 >
-                  カメラ（背面）
-                </button>
-                <button
-                  type="button"
-                  onClick={() => frontCameraInputRef.current?.click()}
-                  className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
-                >
-                  カメラ（前面）
+                  カメラ
                 </button>
               </>
             )}
