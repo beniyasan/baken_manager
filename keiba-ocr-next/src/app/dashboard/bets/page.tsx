@@ -71,14 +71,7 @@ const BetsManagementContent = ({ plan, planEnforced, onUpgrade }: BetsManagement
   return (
     <div className="flex flex-col gap-6">
       <BetsFilters />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex-1">
-          <BetsFilteredSummary />
-        </div>
-        <div className="sm:ml-4 sm:self-start">
-          <BetsExportButton />
-        </div>
-      </div>
+      <BetsFilteredSummary />
       <BetsTable onEdit={handleEdit} onDelete={handleDelete} showActions />
       <div ref={formContainerRef} className="scroll-mt-24">
         {formVisible ? (
@@ -243,45 +236,46 @@ export default function BetsManagementPage() {
         onUpgrade={handlePremiumUpgrade}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
-        <section className="rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-xl shadow-emerald-500/10">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-3">
-              <p className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
-                Bets Overview
-              </p>
-              <div className="space-y-1">
-                <h1 className="text-3xl font-semibold text-white">馬券管理一覧</h1>
-                <p className="text-sm text-slate-300">
-                  登録済みの馬券を1点ずつテーブル形式で確認できます。
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4 md:items-end">
-              <div className="flex flex-col items-start gap-2 text-xs text-slate-300 md:items-end">
-                <span className="uppercase tracking-[0.3em] text-slate-400">現在のプラン</span>
-                <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em] text-emerald-200">
-                  {plan.label}
-                </span>
-              </div>
-              <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2 font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
-                >
-                  ダッシュボードに戻る
-                </Link>
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
-                >
-                  トップに戻る
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <BetsProvider>
+          <section className="rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-xl shadow-emerald-500/10">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-3">
+                <p className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+                  Bets Overview
+                </p>
+                <div className="space-y-1">
+                  <h1 className="text-3xl font-semibold text-white">馬券管理一覧</h1>
+                  <p className="text-sm text-slate-300">
+                    登録済みの馬券を1点ずつテーブル形式で確認できます。
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-4 md:items-end">
+                <div className="flex flex-col items-start gap-2 text-xs text-slate-300 md:items-end">
+                  <span className="uppercase tracking-[0.3em] text-slate-400">現在のプラン</span>
+                  <span className="inline-flex items-center rounded-full border border-emerald-300/40 bg-emerald-500/10 px-3 py-1 font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                    {plan.label}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2 font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
+                  >
+                    ダッシュボードに戻る
+                  </Link>
+                  <BetsExportButton />
+                  <Link
+                    href="/"
+                    className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
+                  >
+                    トップに戻る
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <BetsManagementContent plan={plan} planEnforced={planEnforced} onUpgrade={handlePremiumUpgrade} />
         </BetsProvider>
       </main>
