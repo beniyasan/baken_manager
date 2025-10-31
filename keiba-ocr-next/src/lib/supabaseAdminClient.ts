@@ -1,28 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
+import { debugLog, safePrefix } from "./debug";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+let cached: ReturnType<typeof createClient> | null = null;
 
-import type { Database } from "@/types/database";
+export function getSupabaseAdminClient() {
+  if (cached) return cached;
 
-let adminClient: SupabaseClient<Database> | null = null;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export const getSupabaseAdminClient = (): SupabaseClient<Database> => {
-  if (adminClient) {
-    return adminClient;
-  }
+  if (!url) throw new Error("Missing env: SUPABASE_URL");
+  if (!key) throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("SUPABASE_URL または SUPABASE_SERVICE_ROLE_KEY が設定されていません");
-  }
-
-  adminClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-    },
+  debugLog("admin init", {
+    SUPABASE_URL: url,
+    SERVICE_ROLE_KEY_prefix: safePrefix(key),
   });
 
-  return adminClient;
-};
+  cached = createClient(url, key, {
+    auth: { persistSession: false },
+  });
+  return cached;
+}
