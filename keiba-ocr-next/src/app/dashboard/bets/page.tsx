@@ -14,6 +14,7 @@ import { BetsExportButton } from "@/features/bets/components/BetsExportButton";
 import { BetsTable } from "@/features/bets/components/BetsTable";
 import { getAccountLabel, normalizeProfile, resolvePlan, type PlanFeatures } from "@/lib/plans";
 import { redirectToPremiumCheckout } from "@/lib/premiumCheckout";
+import { redirectToBillingPortal } from "@/lib/billingPortal";
 import type { BetRecord } from "@/lib/types";
 
 type BetsManagementContentProps = {
@@ -209,6 +210,15 @@ export default function BetsManagementPage() {
     }
   }, []);
 
+  const handleOpenBillingPortal = useCallback(async () => {
+    try {
+      await redirectToBillingPortal();
+    } catch (error) {
+      console.error("請求ポータルの表示に失敗しました", error);
+      window.alert("請求ポータルの表示に失敗しました。時間をおいて再度お試しください。");
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -234,6 +244,7 @@ export default function BetsManagementPage() {
         onLogin={() => router.push("/dashboard")}
         onLogout={handleSignOut}
         onUpgrade={handlePremiumUpgrade}
+        onOpenBillingPortal={handleOpenBillingPortal}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         <BetsProvider>

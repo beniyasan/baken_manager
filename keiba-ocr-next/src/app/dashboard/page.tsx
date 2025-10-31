@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { type CurrentProfile, type PlanFeatures, getAccountLabel, normalizeProfile, resolvePlan } from "@/lib/plans";
 import { redirectToPremiumCheckout } from "@/lib/premiumCheckout";
+import { redirectToBillingPortal } from "@/lib/billingPortal";
 
 const AUTH_HINTS:
   | Record<
@@ -90,6 +91,15 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("プレミアム決済ページの開始に失敗しました", error);
       showToast("プレミアム決済ページの読み込みに失敗しました。時間をおいて再度お試しください。", "error");
+    }
+  }, [showToast]);
+
+  const handleOpenBillingPortal = useCallback(async () => {
+    try {
+      await redirectToBillingPortal();
+    } catch (error) {
+      console.error("請求ポータルの表示に失敗しました", error);
+      showToast("請求ポータルの表示に失敗しました。時間をおいて再度お試しください。", "error");
     }
   }, [showToast]);
 
@@ -456,6 +466,7 @@ export default function DashboardPage() {
         onOpenProfile={handleOpenProfileModal}
         onOpenPasswordChange={handleOpenPasswordModal}
         onUpgrade={handlePremiumUpgrade}
+        onOpenBillingPortal={handleOpenBillingPortal}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
         {!currentUser && (
