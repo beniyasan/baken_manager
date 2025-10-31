@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, FormEvent, InputHTMLAttributes, SelectHTMLAttributes, DragEvent } from "react";
+import type {
+  ChangeEvent,
+  FormEvent,
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  DragEvent,
+} from "react";
 import type { BetRecord, BetTicket } from "@/lib/types";
 import { useBetsContext } from "./BetsProvider";
 import { mergeOcrResults, parseOcrText } from "../utils/ocr";
@@ -92,7 +98,10 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrUsage, setOcrUsage] = useState<OcrUsageSnapshot | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const backCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const frontCameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   const handleUpgradeClick = async () => {
@@ -203,6 +212,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     const file = event.target.files?.[0];
     if (!file) return;
     processSelectedFile(file);
+    event.target.value = "";
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -226,6 +236,73 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     event.stopPropagation();
     if (isDragging) setIsDragging(false);
   };
+
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            event.preventDefault();
+            processSelectedFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+
+      const userAgent = navigator.userAgent || "";
+      if (/Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)) {
+        return true;
+      }
+
+      if (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) {
+        return true;
+      }
+
+      if (window.matchMedia) {
+        return window.matchMedia("(pointer: coarse)").matches;
+      }
+
+      return false;
+    };
+
+    const updateMobileState = () => {
+      setIsMobileDevice(checkMobile());
+    };
+
+    updateMobileState();
+
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const handleChange = () => {
+      updateMobileState();
+    };
+
+    coarsePointerQuery.addEventListener?.("change", handleChange);
+
+    return () => {
+      coarsePointerQuery.removeEventListener?.("change", handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!planEnforced || plan.ocrMonthlyLimit === null) {
@@ -709,15 +786,51 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
           onDrop={handleDrop}
         >
           <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" ref={fileInputRef} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={`${SMALL_BUTTON_CLASS} mt-3 inline-flex items-center px-4`}
-          >
-            ファイルを選択
-          </button>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleImageSelect}
+            className="hidden"
+            ref={backCameraInputRef}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handleImageSelect}
+            className="hidden"
+            ref={frontCameraInputRef}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
+            >
+              ファイルを選択
+            </button>
+            {isMobileDevice && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => backCameraInputRef.current?.click()}
+                  className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
+                >
+                  カメラ（背面）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => frontCameraInputRef.current?.click()}
+                  className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
+                >
+                  カメラ（前面）
+                </button>
+              </>
+            )}
+          </div>
           <p className="mt-2 text-xs text-slate-300">
-            クリックまたはドラッグ＆ドロップで画像を選択できます。画像はアプリのデータベースストレージに保存されます。
+            クリック、ドラッグ＆ドロップ、または Ctrl+V / Cmd+V で画像を貼り付けてアップロードできます。画像はアプリのデータベースストレージに保存されます。
           </p>
           {imagePreview && (
             <div className="mt-4 overflow-hidden rounded-lg border border-white/15 bg-slate-950/40">
