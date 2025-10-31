@@ -225,17 +225,21 @@ const applySubscriptionUpdate = async (
       updates.stripe_customer_id = null;
     }
 
-    const subscriptionId = params.subscriptionId ?? params.subscription?.id ?? null;
-    if (subscriptionId !== null) {
+    const hasSubscriptionId = Object.prototype.hasOwnProperty.call(params, "subscriptionId");
+    const subscriptionId = hasSubscriptionId
+      ? params.subscriptionId ?? null
+      : params.subscription?.id ?? null;
+
+    if (hasSubscriptionId || subscriptionId !== null) {
       updates.stripe_subscription_id = subscriptionId;
     }
 
-    const priceId =
-      params.priceIdOverride === undefined
-        ? params.subscription?.items?.data?.[0]?.price?.id ?? null
-        : params.priceIdOverride;
+    const hasPriceOverride = Object.prototype.hasOwnProperty.call(params, "priceIdOverride");
+    const priceId = hasPriceOverride
+      ? params.priceIdOverride ?? null
+      : params.subscription?.items?.data?.[0]?.price?.id ?? null;
 
-    if (priceId !== undefined) {
+    if (hasPriceOverride || priceId !== null) {
       updates.stripe_price_id = priceId;
     }
   }
@@ -275,6 +279,80 @@ const applySubscriptionUpdate = async (
   if (updateError) {
     throw new Error(`プロフィールの更新に失敗しました (user_id=${params.userId}): ${updateError.message}`);
   }
+};
+
+const handleSubscriptionCreated = async (
+  stripe: Stripe,
+  supabase: AdminClient,
+  subscription: Stripe.Subscription,
+): Promise<string> => {
+  const customerId = extractCustomerId(subscription.customer);
+
+  if (!customerId) {
+    throw new Error(`customer.subscription.created に顧客情報が含まれていません (subscription_id=${subscription.id})`);
+  }
+
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await resolveProfileForCustomer(supabase, stripe, customerId, billingColumnsAvailable);
+
+  if (!profile) {
+    throw new Error(`顧客に紐づくプロフィールが見つかりません (customer_id=${customerId})`);
+  }
+
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
+    userId: profile.id,
+    customerId,
+    subscription,
+    subscriptionId: subscription.id,
+  });
+
+  console.info(
+    `${LOG_PREFIX} customer.subscription.created processed`,
+    `user=${profile.id}`,
+    `customer=${customerId}`,
+    `subscription=${subscription.id}`,
+    `status=${subscription.status}`,
+  );
+
+  return `customer.subscription.created: subscription=${subscription.id}, status=${subscription.status}`;
+};
+
+const handleSubscriptionDeleted = async (
+  stripe: Stripe,
+  supabase: AdminClient,
+  subscription: Stripe.Subscription,
+): Promise<string> => {
+  const customerId = extractCustomerId(subscription.customer);
+
+  if (!customerId) {
+    throw new Error(`customer.subscription.deleted に顧客情報が含まれていません (subscription_id=${subscription.id})`);
+  }
+
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await resolveProfileForCustomer(supabase, stripe, customerId, billingColumnsAvailable);
+
+  if (!profile) {
+    throw new Error(`顧客に紐づくプロフィールが見つかりません (customer_id=${customerId})`);
+  }
+
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
+    userId: profile.id,
+    customerId,
+    subscription,
+    subscriptionId: null,
+    priceIdOverride: null,
+    overrideStatus: "canceled",
+  });
+
+  console.info(
+    `${LOG_PREFIX} customer.subscription.deleted processed`,
+    `user=${profile.id}`,
+    `customer=${customerId}`,
+    `subscription=${subscription.id}`,
+    `status=${subscription.status}`,
+  );
+
+  return `customer.subscription.deleted: subscription=${subscription.id}, status=${subscription.status}`;
 };
 
 const handleCheckoutSessionCompleted = async (
@@ -554,8 +632,24 @@ export async function POST(request: NextRequest) {
         );
         break;
       }
+      case "customer.subscription.created": {
+        note = await handleSubscriptionCreated(
+          stripe,
+          supabase,
+          event.data.object as Stripe.Subscription,
+        );
+        break;
+      }
       case "customer.subscription.updated": {
         note = await handleSubscriptionUpdated(
+          stripe,
+          supabase,
+          event.data.object as Stripe.Subscription,
+        );
+        break;
+      }
+      case "customer.subscription.deleted": {
+        note = await handleSubscriptionDeleted(
           stripe,
           supabase,
           event.data.object as Stripe.Subscription,
