@@ -26,6 +26,7 @@ export const BetsFilters = () => {
     filters,
     setDateRange,
     setTrackFilters,
+    setRaceNameFilter,
     resetFilters,
     hasActiveFilters,
   } = useBetsContext();
@@ -111,7 +112,7 @@ export const BetsFilters = () => {
             ) : null}
           </div>
           {!collapsed ? (
-            <p className="mt-1 text-xs text-slate-400">期間と競馬場で一覧を絞り込みできます。</p>
+            <p className="mt-1 text-xs text-slate-400">レース名・期間・競馬場で一覧を絞り込みできます。</p>
           ) : hasActiveFilters ? (
             <p className="mt-1 text-xs text-emerald-200">フィルター適用中</p>
           ) : null}
@@ -119,6 +120,17 @@ export const BetsFilters = () => {
 
         {!collapsed ? (
           <>
+            <label className="space-y-1 text-xs text-slate-300">
+              <span>レース名</span>
+              <input
+                type="text"
+                value={filters.raceName}
+                placeholder="例: 有馬記念"
+                onChange={(event) => setRaceNameFilter(event.target.value)}
+                className={INPUT_CLASS}
+              />
+            </label>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="space-y-1 text-xs text-slate-300">
                 <span>開始日</span>

@@ -128,6 +128,7 @@ export const useBets = () => {
   const [filters, setFilters] = useState({
     dateFrom: null as string | null,
     dateTo: null as string | null,
+    raceName: "",
     tracks: [] as string[],
   });
 
@@ -163,7 +164,14 @@ export const useBets = () => {
   }, []);
 
   const filteredBets = useMemo(() => {
-    if (!filters.dateFrom && !filters.dateTo && filters.tracks.length === 0) {
+    const raceNameQuery = filters.raceName.trim();
+
+    if (
+      !filters.dateFrom &&
+      !filters.dateTo &&
+      filters.tracks.length === 0 &&
+      raceNameQuery.length === 0
+    ) {
       return bets;
     }
 
@@ -171,6 +179,15 @@ export const useBets = () => {
     const hasTrackFilter = selectedTracks.size > 0;
 
     return bets.filter((bet) => {
+      if (raceNameQuery.length > 0) {
+        const normalizedQuery = raceNameQuery.toLocaleLowerCase();
+        const normalizedRaceName = bet.raceName?.toLocaleLowerCase() ?? "";
+
+        if (!normalizedRaceName.includes(normalizedQuery)) {
+          return false;
+        }
+      }
+
       const normalizedDate = bet.date ? bet.date.slice(0, 10) : null;
 
       if (filters.dateFrom && (!normalizedDate || normalizedDate < filters.dateFrom)) {
@@ -201,8 +218,14 @@ export const useBets = () => {
   }, [bets, filters]);
 
   const hasActiveFilters = useMemo(
-    () => Boolean(filters.dateFrom || filters.dateTo || filters.tracks.length),
-    [filters.dateFrom, filters.dateTo, filters.tracks.length],
+    () =>
+      Boolean(
+        filters.dateFrom ||
+          filters.dateTo ||
+          filters.tracks.length ||
+          filters.raceName.trim().length > 0,
+      ),
+    [filters.dateFrom, filters.dateTo, filters.tracks.length, filters.raceName],
   );
 
   const setDateRange = useCallback((from: string | null, to: string | null) => {
@@ -221,8 +244,15 @@ export const useBets = () => {
     }));
   }, []);
 
+  const setRaceNameFilter = useCallback((value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      raceName: value,
+    }));
+  }, []);
+
   const resetFilters = useCallback(() => {
-    setFilters({ dateFrom: null, dateTo: null, tracks: [] });
+    setFilters({ dateFrom: null, dateTo: null, raceName: "", tracks: [] });
   }, []);
 
   const addBet = useCallback(async (bet: Partial<BetRecord> & { bets: BetTicket[] }) => {
@@ -363,6 +393,7 @@ export const useBets = () => {
     hasActiveFilters,
     setDateRange,
     setTrackFilters,
+    setRaceNameFilter,
     resetFilters,
     fetchBets,
     addBet,
