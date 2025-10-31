@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/stripe";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
+import type { Database } from "@/types/database";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
 
@@ -29,11 +30,16 @@ export async function POST() {
       return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
     }
 
+    type ProfileStripeInfo = Pick<
+      Database["public"]["Tables"]["profiles"]["Row"],
+      "stripe_customer_id"
+    >;
+
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<ProfileStripeInfo>();
 
     if (profileError) {
       console.error("プロフィール情報の取得に失敗", profileError);
