@@ -10,6 +10,6 @@ export function getStripeClient() {
 
   debugLog("stripe init", { STRIPE_SECRET_KEY_prefix: safePrefix(sk) });
 
-  cached = new Stripe(sk, { apiVersion: "2024-06-20" });
+  cached = new Stripe(sk, { apiVersion: "2023-10-16" });
   return cached;
 }
