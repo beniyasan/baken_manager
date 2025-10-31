@@ -458,6 +458,20 @@ export default function DashboardPage() {
         onUpgrade={handlePremiumUpgrade}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
+        <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-end">
+          <Link
+            href="/dashboard/bets"
+            className="inline-flex items-center justify-center rounded-full border border-white/20 bg-transparent px-5 py-2 font-medium text-white transition hover:border-white/40 hover:text-emerald-200"
+          >
+            馬券管理ページへ
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-5 py-2 font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-300"
+          >
+            トップに戻る
+          </Link>
+        </div>
         {!currentUser && (
           <div className="grid gap-6 md:grid-cols-3">
             <Card className="border-white/10 bg-slate-900/60 shadow-lg shadow-emerald-500/10">
