@@ -53,12 +53,17 @@ export async function GET() {
     }
 
     const usageMonth = getUsageMonthKey();
+    type UsageMonthlyInfo = Pick<
+      Database["public"]["Tables"]["ocr_usage_monthly"]["Row"],
+      "usage_count"
+    >;
+
     const { data: usageRow, error: usageError } = await supabase
       .from("ocr_usage_monthly")
       .select("usage_count")
       .eq("user_id", user.id)
       .eq("usage_month", usageMonth)
-      .maybeSingle();
+      .maybeSingle<UsageMonthlyInfo>();
 
     if (usageError) {
       console.error("OCR利用状況の取得に失敗", usageError);
