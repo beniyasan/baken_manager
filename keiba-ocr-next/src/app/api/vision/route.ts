@@ -4,6 +4,12 @@ import { buildUsageSnapshot, getUsageMonthKey, type OcrUsageSnapshot } from "@/l
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 import type { Database } from "@/types/database";
 
+type ProfileRoleInfo = Pick<Database["public"]["Tables"]["profiles"]["Row"], "user_role">;
+type UsageMonthlyInfo = Pick<
+  Database["public"]["Tables"]["ocr_usage_monthly"]["Row"],
+  "usage_count"
+>;
+
 export const runtime = "nodejs";
 
 const VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate";
@@ -37,11 +43,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
     }
 
-    type ProfileRoleInfo = Pick<
-      Database["public"]["Tables"]["profiles"]["Row"],
-      "user_role"
-    >;
-
     const { data: profileRow, error: profileError } = await supabase
       .from("profiles")
       .select("user_role")
@@ -64,11 +65,6 @@ export async function POST(request: NextRequest) {
     let currentUsageCount = 0;
 
     if (plan.ocrMonthlyLimit !== null) {
-      type UsageMonthlyInfo = Pick<
-        Database["public"]["Tables"]["ocr_usage_monthly"]["Row"],
-        "usage_count"
-      >;
-
       const { data: usageRow, error: usageError } = await supabase
         .from("ocr_usage_monthly")
         .select("usage_count")
