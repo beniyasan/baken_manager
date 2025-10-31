@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
+import type { Database } from "@/types/database";
 
 export const runtime = "nodejs";
 
@@ -29,11 +30,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
     }
 
+    type ProfileRoleInfo = Pick<
+      Database["public"]["Tables"]["profiles"]["Row"],
+      "user_role"
+    >;
+
     const { data: profileRow, error: profileError } = await supabase
       .from("profiles")
       .select("user_role")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<ProfileRoleInfo>();
 
     if (profileError) {
       console.error("ユーザープロフィールの取得に失敗", profileError);
