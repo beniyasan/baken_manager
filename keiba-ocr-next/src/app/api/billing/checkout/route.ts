@@ -34,9 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: LOGIN_REQUIRED_MESSAGE }, { status: 401 });
     }
 
-    const adminSupabase = getSupabaseAdminClient();
-
-    const { data: profile, error: profileError } = await adminSupabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
@@ -52,6 +50,7 @@ export async function POST(request: NextRequest) {
     let customerId = profile?.stripe_customer_id ?? null;
 
     if (!customerId) {
+      const adminSupabase = getSupabaseAdminClient();
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
         metadata: {
