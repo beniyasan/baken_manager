@@ -14,7 +14,14 @@ import type { BetRecord } from "@/lib/types";
 import type { Database } from "@/types/database";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BuildingStorefrontIcon, CloudArrowUpIcon, TrophyIcon } from "@heroicons/react/24/outline";
-import { type CurrentProfile, type PlanFeatures, getAccountLabel, normalizeProfile, resolvePlan } from "@/lib/plans";
+import {
+  PLAN_FEATURES,
+  type CurrentProfile,
+  type PlanFeatures,
+  getAccountLabel,
+  normalizeProfile,
+  resolvePlan,
+} from "@/lib/plans";
 import { redirectToPremiumCheckout } from "@/lib/premiumCheckout";
 
 const AUTH_HINTS:
@@ -831,6 +838,7 @@ function DashboardArea({ onSignOut, plan, planEnforced, onUpgrade }: DashboardAr
   const { deleteBet, fetchBets } = useBetsContext();
   const formSectionRef = useRef<HTMLDivElement | null>(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const premiumPlan = PLAN_FEATURES.premium;
 
   const handleUpgradeClick = async () => {
     if (!onUpgrade || upgradeLoading) return;
@@ -899,34 +907,59 @@ function DashboardArea({ onSignOut, plan, planEnforced, onUpgrade }: DashboardAr
         </CardHeader>
         {planEnforced && (
           <CardContent className="border-t border-white/10">
-            <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white shadow-inner shadow-black/10 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-200">
-                  {plan.label}
-                </span>
-                <span className="flex items-center gap-2 text-xs sm:text-sm">
-                  <span className="font-medium text-emerald-200">登録上限</span>
-                  <span className="font-semibold text-white">
-                    {plan.maxBets !== null ? `${plan.maxBets}件` : "無制限"}
+            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-white shadow-inner shadow-black/10 sm:text-sm">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-slate-900/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">現在のプラン</p>
+                  <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/40 bg-emerald-400/15 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-emerald-200">
+                    {plan.label}
                   </span>
-                </span>
-                <span className="flex items-center gap-2 text-xs sm:text-sm">
-                  <span className="font-medium text-emerald-200">OCR</span>
-                  <span className="font-semibold text-white">
-                    {plan.ocrEnabled ? plan.ocrUsageLabel : "利用不可"}
+                  <dl className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="font-medium text-emerald-200">登録上限</dt>
+                      <dd className="font-semibold text-white">
+                        {plan.maxBets !== null ? `${plan.maxBets}件` : "無制限"}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="font-medium text-emerald-200">OCR</dt>
+                      <dd className="font-semibold text-white">
+                        {plan.ocrEnabled ? plan.ocrUsageLabel : "利用不可"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="flex flex-col gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">プレミアムプラン</p>
+                  <span className="inline-flex w-fit items-center rounded-full border border-emerald-400/50 bg-emerald-400/20 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-emerald-100">
+                    {premiumPlan.label}
                   </span>
-                </span>
+                  <dl className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="font-medium text-emerald-100">登録上限</dt>
+                      <dd className="font-semibold text-white">
+                        {premiumPlan.maxBets !== null
+                          ? `${premiumPlan.maxBets}件`
+                          : "無制限"}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="font-medium text-emerald-100">OCR</dt>
+                      <dd className="font-semibold text-white">{premiumPlan.ocrUsageLabel}</dd>
+                    </div>
+                  </dl>
+                  {!plan.ocrEnabled && plan.canUpgrade && onUpgrade && (
+                    <button
+                      type="button"
+                      onClick={handleUpgradeClick}
+                      disabled={upgradeLoading}
+                      className="mt-2 inline-flex items-center justify-center rounded-full border border-emerald-200/50 px-4 py-2 text-[0.7rem] font-semibold text-emerald-100 transition hover:border-emerald-100 hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      プレミアムにアップグレード
+                    </button>
+                  )}
+                </div>
               </div>
-              {!plan.ocrEnabled && plan.canUpgrade && onUpgrade && (
-                <button
-                  type="button"
-                  onClick={handleUpgradeClick}
-                  disabled={upgradeLoading}
-                  className="inline-flex items-center justify-center rounded-full border border-emerald-300/40 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:border-emerald-200 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  プレミアムにアップグレード
-                </button>
-              )}
             </div>
           </CardContent>
         )}
