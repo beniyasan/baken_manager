@@ -1,9 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { debugLog, safePrefix } from "./debug";
+import type { Database } from "@/types/database";
 
-let cached: ReturnType<typeof createClient> | null = null;
+let cached: SupabaseClient<Database> | null = null;
 
-export function getSupabaseAdminClient() {
+export function getSupabaseAdminClient(): SupabaseClient<Database> {
   if (cached) return cached;
 
   const url = process.env.SUPABASE_URL;
@@ -17,7 +18,7 @@ export function getSupabaseAdminClient() {
     SERVICE_ROLE_KEY_prefix: safePrefix(key),
   });
 
-  cached = createClient(url, key, {
+  cached = createClient<Database>(url, key, {
     auth: { persistSession: false },
   });
   return cached;

@@ -3,9 +3,15 @@ import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 import { debugLog, isDebugBilling, safePrefix } from "@/lib/debug";
+import type { Database } from "@/types/database";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
 export const runtime = "nodejs";
+
+type ProfileStripeInfo = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "stripe_customer_id"
+>;
 
 export async function GET(request: NextRequest) {
   try {
@@ -89,7 +95,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<ProfileStripeInfo>();
 
     if (profileError) {
       console.error("プロフィール情報の取得に失敗", profileError);
