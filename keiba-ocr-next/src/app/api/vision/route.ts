@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
         .select("usage_count")
         .eq("user_id", user.id)
         .eq("usage_month", usageMonth)
-        .maybeSingle();
+        .maybeSingle<UsageMonthlyInfo>();
 
       if (updatedUsageError) {
         console.error("OCR利用状況の再取得に失敗", updatedUsageError);
