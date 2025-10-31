@@ -13,6 +13,7 @@ export type HeaderProps = {
   onOpenProfile?: () => void;
   onOpenPasswordChange?: () => void;
   onUpgrade?: () => void | Promise<void>;
+  onOpenBillingPortal?: () => void | Promise<void>;
 };
 
 const getDisplayName = (user: User | null) => {
@@ -30,6 +31,7 @@ export const Header = ({
   onOpenProfile,
   onOpenPasswordChange,
   onUpgrade,
+  onOpenBillingPortal,
 }: HeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -127,6 +129,18 @@ export const Header = ({
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
                     >
                       パスワードを変更
+                    </button>
+                  )}
+                  {onOpenBillingPortal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void onOpenBillingPortal();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/10"
+                    >
+                      請求書ポータルを開く
                     </button>
                   )}
                   {canUpgrade && (
