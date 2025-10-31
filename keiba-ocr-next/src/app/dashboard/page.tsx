@@ -889,7 +889,7 @@ function DashboardArea({ onSignOut, plan, planEnforced, onUpgrade }: DashboardAr
             </button>
             <button
               onClick={() => setShowForm((prev) => !prev)}
-              className="rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-300"
+              className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/40 transition hover:bg-emerald-400"
             >
               {showForm ? "フォームを隠す" : "フォームを表示"}
             </button>
