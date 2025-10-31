@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
-import { isUndefinedColumnError } from "@/lib/supabaseErrors";
+import { isUndefinedColumnError, isUndefinedTableError } from "@/lib/supabaseErrors";
 import type { Database } from "@/types/database";
 
 export const runtime = "nodejs";
@@ -28,6 +28,7 @@ type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type UserRole = Database["public"]["Enums"]["user_role"];
 
 let billingColumnsAvailableCache: boolean | null = null;
+let eventLogAvailableCache: boolean | null = null;
 
 const PROFILE_SELECT_BASE = PROFILE_BASE_COLUMNS.join(",");
 const PROFILE_SELECT_WITH_BILLING = [...PROFILE_BASE_COLUMNS, ...PROFILE_BILLING_COLUMNS].join(",");
@@ -50,6 +51,29 @@ const ensureBillingColumnsAvailability = async (supabase: AdminClient): Promise<
   }
 
   billingColumnsAvailableCache = true;
+  return true;
+};
+
+const ensureEventLogAvailability = async (supabase: AdminClient): Promise<boolean> => {
+  if (eventLogAvailableCache !== null) {
+    return eventLogAvailableCache;
+  }
+
+  const { error } = await supabase.from("stripe_event_log").select("event_id").limit(1);
+
+  if (error) {
+    if (isUndefinedTableError(error, "stripe_event_log")) {
+      console.warn(
+        `${LOG_PREFIX} stripe_event_log table missing; event persistence disabled until migrations are applied`,
+      );
+      eventLogAvailableCache = false;
+      return false;
+    }
+
+    throw new Error(`Stripeイベントログの確認に失敗しました: ${error.message}`);
+  }
+
+  eventLogAvailableCache = true;
   return true;
 };
 
@@ -457,49 +481,65 @@ export async function POST(request: NextRequest) {
   const eventId = event.id;
   const receivedAt = new Date().toISOString();
 
-  const { data: existingLog, error: logFetchError } = await supabase
-    .from("stripe_event_log")
-    .select("event_id, processed_at, ok")
-    .eq("event_id", eventId)
-    .maybeSingle();
-
-  if (logFetchError) {
-    console.error(`${LOG_PREFIX} イベントログの取得に失敗`, logFetchError);
-    return new NextResponse("Failed to access event log", { status: 500 });
+  let eventLogAvailable = true;
+  try {
+    eventLogAvailable = await ensureEventLogAvailability(supabase);
+  } catch (verifyError) {
+    console.error(`${LOG_PREFIX} イベントログの確認に失敗`, verifyError);
+    return new NextResponse("Failed to verify event log", { status: 500 });
   }
 
-  if (existingLog?.processed_at && existingLog.ok) {
-    console.info(`${LOG_PREFIX} 既に処理済みのイベントをスキップ`, event.type, eventId);
-    return NextResponse.json({ received: true });
-  }
+  let existingLog: { event_id: string; processed_at: string | null; ok: boolean | null } | null = null;
 
-  if (!existingLog) {
-    const { error: insertError } = await supabase.from("stripe_event_log").insert({
-      event_id: eventId,
-      type: event.type,
-      received_at: receivedAt,
-    });
-
-    if (insertError) {
-      console.error(`${LOG_PREFIX} イベントログの作成に失敗`, insertError);
-      return new NextResponse("Failed to prepare event log", { status: 500 });
-    }
-  } else {
-    const { error: updateError } = await supabase
+  if (eventLogAvailable) {
+    const { data, error: logFetchError } = await supabase
       .from("stripe_event_log")
-      .update({
+      .select("event_id, processed_at, ok")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (logFetchError) {
+      console.error(`${LOG_PREFIX} イベントログの取得に失敗`, logFetchError);
+      return new NextResponse("Failed to access event log", { status: 500 });
+    }
+
+    existingLog = data;
+
+    if (existingLog?.processed_at && existingLog.ok) {
+      console.info(`${LOG_PREFIX} 既に処理済みのイベントをスキップ`, event.type, eventId);
+      return NextResponse.json({ received: true });
+    }
+
+    if (!existingLog) {
+      const { error: insertError } = await supabase.from("stripe_event_log").insert({
+        event_id: eventId,
         type: event.type,
         received_at: receivedAt,
-        processed_at: null,
-        ok: null,
-        note: null,
-      })
-      .eq("event_id", eventId);
+      });
 
-    if (updateError) {
-      console.error(`${LOG_PREFIX} イベントログの更新に失敗`, updateError);
-      return new NextResponse("Failed to update event log", { status: 500 });
+      if (insertError) {
+        console.error(`${LOG_PREFIX} イベントログの作成に失敗`, insertError);
+        return new NextResponse("Failed to prepare event log", { status: 500 });
+      }
+    } else {
+      const { error: updateError } = await supabase
+        .from("stripe_event_log")
+        .update({
+          type: event.type,
+          received_at: receivedAt,
+          processed_at: null,
+          ok: null,
+          note: null,
+        })
+        .eq("event_id", eventId);
+
+      if (updateError) {
+        console.error(`${LOG_PREFIX} イベントログの更新に失敗`, updateError);
+        return new NextResponse("Failed to update event log", { status: 500 });
+      }
     }
+  } else {
+    console.warn(`${LOG_PREFIX} Stripeイベントログテーブルが存在しないため永続化をスキップします`, eventId);
   }
 
   let note: string | null = null;
@@ -540,35 +580,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { error: completeError } = await supabase
-      .from("stripe_event_log")
-      .update({
-        processed_at: new Date().toISOString(),
-        ok: true,
-        note,
-      })
-      .eq("event_id", eventId);
+    if (eventLogAvailable) {
+      const { error: completeError } = await supabase
+        .from("stripe_event_log")
+        .update({
+          processed_at: new Date().toISOString(),
+          ok: true,
+          note,
+        })
+        .eq("event_id", eventId);
 
-    if (completeError) {
-      console.error(`${LOG_PREFIX} イベントログの完了更新に失敗`, completeError);
-      return new NextResponse("Failed to finalize event log", { status: 500 });
+      if (completeError) {
+        console.error(`${LOG_PREFIX} イベントログの完了更新に失敗`, completeError);
+        return new NextResponse("Failed to finalize event log", { status: 500 });
+      }
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error(`${LOG_PREFIX} イベント処理中にエラーが発生`, event.type, eventId, error);
 
-    const { error: failedUpdateError } = await supabase
-      .from("stripe_event_log")
-      .update({
-        processed_at: new Date().toISOString(),
-        ok: false,
-        note: error instanceof Error ? error.message : String(error),
-      })
-      .eq("event_id", eventId);
+    if (eventLogAvailable) {
+      const { error: failedUpdateError } = await supabase
+        .from("stripe_event_log")
+        .update({
+          processed_at: new Date().toISOString(),
+          ok: false,
+          note: error instanceof Error ? error.message : String(error),
+        })
+        .eq("event_id", eventId);
 
-    if (failedUpdateError) {
-      console.error(`${LOG_PREFIX} エラーログの更新に失敗`, failedUpdateError);
+      if (failedUpdateError) {
+        console.error(`${LOG_PREFIX} エラーログの更新に失敗`, failedUpdateError);
+      }
     }
 
     return new NextResponse("Webhook handler error", { status: 500 });
