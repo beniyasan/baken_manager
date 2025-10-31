@@ -101,6 +101,7 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
   const backCameraInputRef = useRef<HTMLInputElement | null>(null);
   const frontCameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   const handleUpgradeClick = async () => {
@@ -256,6 +257,50 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
     document.addEventListener("paste", handlePaste);
     return () => {
       document.removeEventListener("paste", handlePaste);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+
+      const userAgent = navigator.userAgent || "";
+      if (/Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)) {
+        return true;
+      }
+
+      if (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) {
+        return true;
+      }
+
+      if (window.matchMedia) {
+        return window.matchMedia("(pointer: coarse)").matches;
+      }
+
+      return false;
+    };
+
+    const updateMobileState = () => {
+      setIsMobileDevice(checkMobile());
+    };
+
+    updateMobileState();
+
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const handleChange = () => {
+      updateMobileState();
+    };
+
+    coarsePointerQuery.addEventListener?.("change", handleChange);
+
+    return () => {
+      coarsePointerQuery.removeEventListener?.("change", handleChange);
     };
   }, []);
 
@@ -765,20 +810,24 @@ export const BetsForm = ({ editingBet, onCancelEdit, onSuccess, plan, planEnforc
             >
               ファイルを選択
             </button>
-            <button
-              type="button"
-              onClick={() => backCameraInputRef.current?.click()}
-              className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
-            >
-              カメラ（背面）
-            </button>
-            <button
-              type="button"
-              onClick={() => frontCameraInputRef.current?.click()}
-              className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
-            >
-              カメラ（前面）
-            </button>
+            {isMobileDevice && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => backCameraInputRef.current?.click()}
+                  className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
+                >
+                  カメラ（背面）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => frontCameraInputRef.current?.click()}
+                  className={`${SMALL_BUTTON_CLASS} inline-flex items-center px-4`}
+                >
+                  カメラ（前面）
+                </button>
+              </>
+            )}
           </div>
           <p className="mt-2 text-xs text-slate-300">
             クリック、ドラッグ＆ドロップ、または Ctrl+V / Cmd+V で画像を貼り付けてアップロードできます。画像はアプリのデータベースストレージに保存されます。
