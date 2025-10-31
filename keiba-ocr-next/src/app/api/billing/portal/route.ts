@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/stripe";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
+import { debugLog } from "@/lib/debug";
+import { findExistingCustomerId } from "@/lib/stripeCustomers";
+import { isUndefinedColumnError } from "@/lib/supabaseErrors";
 import type { Database } from "@/types/database";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
@@ -35,24 +38,49 @@ export async function POST() {
       "stripe_customer_id"
     >;
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .maybeSingle<ProfileStripeInfo>();
+    let stripeCustomerColumnAvailable = true;
+    let profile: ProfileStripeInfo | null = null;
 
-    if (profileError) {
-      console.error("プロフィール情報の取得に失敗", profileError);
-      return NextResponse.json({ error: "プロフィール情報の取得に失敗しました" }, { status: 500 });
-    }
+    {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("id", user.id)
+        .maybeSingle<ProfileStripeInfo>();
 
-    const customerId = profile?.stripe_customer_id;
-
-    if (!customerId) {
-      return NextResponse.json({ error: "Stripe顧客情報が見つかりません" }, { status: 400 });
+      if (error) {
+        if (isUndefinedColumnError(error, "stripe_customer_id")) {
+          stripeCustomerColumnAvailable = false;
+          debugLog("portal stripe_customer_id missing; falling back", { userId: user.id });
+        } else {
+          console.error("プロフィール情報の取得に失敗", error);
+          return NextResponse.json({ error: "プロフィール情報の取得に失敗しました" }, { status: 500 });
+        }
+      } else {
+        profile = data;
+      }
     }
 
     const stripe = getStripeClient();
+    let customerId = profile?.stripe_customer_id ?? null;
+
+    if (!customerId) {
+      const existingId = await findExistingCustomerId(stripe, {
+        userId: user.id,
+        email: user.email,
+      });
+
+      if (existingId) {
+        customerId = existingId;
+      }
+    }
+
+    if (!customerId) {
+      const message = stripeCustomerColumnAvailable
+        ? "Stripe顧客情報が見つかりません"
+        : "Stripe顧客情報が未連携の可能性があります";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,

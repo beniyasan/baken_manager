@@ -3,6 +3,8 @@ import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
 import { debugLog, isDebugBilling, safePrefix } from "@/lib/debug";
+import { findExistingCustomerId } from "@/lib/stripeCustomers";
+import { isUndefinedColumnError } from "@/lib/supabaseErrors";
 import type { Database } from "@/types/database";
 
 const LOGIN_REQUIRED_MESSAGE = "プレミアム機能を利用するにはログインが必要です。";
@@ -91,25 +93,60 @@ export async function POST(request: NextRequest) {
     }
 
     const adminSupabase = getSupabaseAdminClient();
-    const { data: profile, error: profileError } = await adminSupabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .maybeSingle<ProfileStripeInfo>();
+    let stripeCustomerColumnAvailable = true;
+    let profile: ProfileStripeInfo | null = null;
 
-    if (profileError) {
-      console.error("プロフィール情報の取得に失敗", profileError);
-      return NextResponse.json(
-        {
-          error: "プロフィール情報の取得に失敗しました",
-          detail: isDebugBilling() ? profileError.message : undefined,
-        },
-        { status: 500 }
-      );
+    {
+      const { data, error } = await adminSupabase
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("id", user.id)
+        .maybeSingle<ProfileStripeInfo>();
+
+      if (error) {
+        if (isUndefinedColumnError(error, "stripe_customer_id")) {
+          stripeCustomerColumnAvailable = false;
+          debugLog("profiles.stripe_customer_id column missing; falling back to Stripe search", {
+            userId: user.id,
+          });
+        } else {
+          console.error("プロフィール情報の取得に失敗", error);
+          return NextResponse.json(
+            {
+              error: "プロフィール情報の取得に失敗しました",
+              detail: isDebugBilling() ? error.message : undefined,
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        profile = data;
+      }
     }
 
     const stripe = getStripeClient();
     let customerId = profile?.stripe_customer_id ?? null;
+
+    if (!customerId) {
+      const existingId = await findExistingCustomerId(stripe, {
+        userId: user.id,
+        email: user.email,
+      });
+
+      if (existingId) {
+        customerId = existingId;
+        if (stripeCustomerColumnAvailable && !profile?.stripe_customer_id) {
+          const { error: backfillError } = await adminSupabase
+            .from("profiles")
+            .update({ stripe_customer_id: existingId })
+            .eq("id", user.id);
+
+          if (backfillError) {
+            console.warn("Stripe顧客IDの補完に失敗", backfillError);
+          }
+        }
+      }
+    }
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -118,20 +155,27 @@ export async function POST(request: NextRequest) {
       });
       customerId = customer.id;
 
-      const { error: updateError } = await adminSupabase
-        .from("profiles")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", user.id);
+      if (stripeCustomerColumnAvailable) {
+        const { error: updateError } = await adminSupabase
+          .from("profiles")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", user.id);
 
-      if (updateError) {
-        console.error("Stripe顧客IDの保存に失敗", updateError);
-        return NextResponse.json(
-          {
-            error: "顧客情報の更新に失敗しました",
-            detail: isDebugBilling() ? updateError.message : undefined,
-          },
-          { status: 500 }
-        );
+        if (updateError) {
+          console.error("Stripe顧客IDの保存に失敗", updateError);
+          return NextResponse.json(
+            {
+              error: "顧客情報の更新に失敗しました",
+              detail: isDebugBilling() ? updateError.message : undefined,
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        debugLog("profiles.stripe_customer_id column unavailable; skipping persistence", {
+          userId: user.id,
+          customer_prefix: safePrefix(customerId, 6),
+        });
       }
     }
 
