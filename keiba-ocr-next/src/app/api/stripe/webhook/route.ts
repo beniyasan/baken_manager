@@ -4,30 +4,54 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdminClient";
+import { isUndefinedColumnError } from "@/lib/supabaseErrors";
 import type { Database } from "@/types/database";
 
 export const runtime = "nodejs";
 
 const LOG_PREFIX = "[StripeWebhook]";
 const PREMIUM_STATUSES = new Set(["active", "trialing"]);
-const PROFILE_COLUMNS =
-  "id,user_role,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_status,current_period_end,cancel_at_period_end";
-
 type AdminClient = SupabaseClient<Database>;
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type ProfileRecord = Pick<
-  ProfileRow,
-  | "id"
-  | "user_role"
-  | "stripe_customer_id"
-  | "stripe_subscription_id"
-  | "stripe_price_id"
-  | "subscription_status"
-  | "current_period_end"
-  | "cancel_at_period_end"
->;
+const PROFILE_BASE_COLUMNS = ["id", "user_role"] as const;
+const PROFILE_BILLING_COLUMNS = [
+  "stripe_customer_id",
+  "stripe_subscription_id",
+  "stripe_price_id",
+  "subscription_status",
+  "current_period_end",
+  "cancel_at_period_end",
+] as const;
+type ProfileRecord = Pick<ProfileRow, (typeof PROFILE_BASE_COLUMNS)[number]> &
+  Partial<Pick<ProfileRow, (typeof PROFILE_BILLING_COLUMNS)[number]>>;
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type UserRole = Database["public"]["Enums"]["user_role"];
+
+let billingColumnsAvailableCache: boolean | null = null;
+
+const PROFILE_SELECT_BASE = PROFILE_BASE_COLUMNS.join(",");
+const PROFILE_SELECT_WITH_BILLING = [...PROFILE_BASE_COLUMNS, ...PROFILE_BILLING_COLUMNS].join(",");
+
+const ensureBillingColumnsAvailability = async (supabase: AdminClient): Promise<boolean> => {
+  if (billingColumnsAvailableCache !== null) {
+    return billingColumnsAvailableCache;
+  }
+
+  const { error } = await supabase.from("profiles").select("stripe_customer_id").limit(1);
+
+  if (error) {
+    if (isUndefinedColumnError(error, "stripe_customer_id")) {
+      console.warn(`${LOG_PREFIX} profiles.stripe_customer_id column missing; billing field persistence disabled`);
+      billingColumnsAvailableCache = false;
+      return false;
+    }
+
+    throw new Error(`プロフィールスキーマの確認に失敗しました: ${error.message}`);
+  }
+
+  billingColumnsAvailableCache = true;
+  return true;
+};
 
 const extractCustomerId = (
   customer: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined,
@@ -82,12 +106,17 @@ const determineNextRole = (
   return "free";
 };
 
-const fetchProfileById = async (supabase: AdminClient, userId: string): Promise<ProfileRecord | null> => {
+const fetchProfileById = async (
+  supabase: AdminClient,
+  userId: string,
+  billingColumnsAvailable: boolean,
+): Promise<ProfileRecord | null> => {
+  const selectColumns = billingColumnsAvailable ? PROFILE_SELECT_WITH_BILLING : PROFILE_SELECT_BASE;
   const { data, error } = await supabase
     .from("profiles")
-    .select(PROFILE_COLUMNS)
+    .select(selectColumns)
     .eq("id", userId)
-    .maybeSingle();
+    .maybeSingle<ProfileRecord>();
 
   if (error) {
     throw new Error(`プロフィールの取得に失敗しました (user_id=${userId}): ${error.message}`);
@@ -99,12 +128,17 @@ const fetchProfileById = async (supabase: AdminClient, userId: string): Promise<
 const fetchProfileByCustomerId = async (
   supabase: AdminClient,
   customerId: string,
+  billingColumnsAvailable: boolean,
 ): Promise<ProfileRecord | null> => {
+  if (!billingColumnsAvailable) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("profiles")
-    .select(PROFILE_COLUMNS)
+    .select(PROFILE_SELECT_WITH_BILLING)
     .eq("stripe_customer_id", customerId)
-    .maybeSingle();
+    .maybeSingle<ProfileRecord>();
 
   if (error) {
     throw new Error(`プロフィールの取得に失敗しました (customer_id=${customerId}): ${error.message}`);
@@ -117,11 +151,14 @@ const resolveProfileForCustomer = async (
   supabase: AdminClient,
   stripe: Stripe,
   customerId: string,
+  billingColumnsAvailable: boolean,
 ): Promise<ProfileRecord | null> => {
-  const profile = await fetchProfileByCustomerId(supabase, customerId);
+  if (billingColumnsAvailable) {
+    const profile = await fetchProfileByCustomerId(supabase, customerId, billingColumnsAvailable);
 
-  if (profile) {
-    return profile;
+    if (profile) {
+      return profile;
+    }
   }
 
   const customer = await stripe.customers.retrieve(customerId);
@@ -136,7 +173,7 @@ const resolveProfileForCustomer = async (
     return null;
   }
 
-  return fetchProfileById(supabase, userIdFromMetadata);
+  return fetchProfileById(supabase, userIdFromMetadata, billingColumnsAvailable);
 };
 
 const fetchSubscription = async (stripe: Stripe, subscriptionId: string): Promise<Stripe.Subscription> =>
@@ -145,6 +182,7 @@ const fetchSubscription = async (stripe: Stripe, subscriptionId: string): Promis
 const applySubscriptionUpdate = async (
   supabase: AdminClient,
   profile: ProfileRecord,
+  billingColumnsAvailable: boolean,
   params: {
     userId: string;
     customerId?: string | null;
@@ -156,39 +194,43 @@ const applySubscriptionUpdate = async (
 ): Promise<void> => {
   const updates: ProfileUpdate = {};
 
-  if (params.customerId) {
-    updates.stripe_customer_id = params.customerId;
-  } else if (!profile.stripe_customer_id) {
-    updates.stripe_customer_id = null;
-  }
+  if (billingColumnsAvailable) {
+    if (params.customerId) {
+      updates.stripe_customer_id = params.customerId;
+    } else if (!profile.stripe_customer_id) {
+      updates.stripe_customer_id = null;
+    }
 
-  const subscriptionId = params.subscriptionId ?? params.subscription?.id ?? null;
-  if (subscriptionId !== null) {
-    updates.stripe_subscription_id = subscriptionId;
-  }
+    const subscriptionId = params.subscriptionId ?? params.subscription?.id ?? null;
+    if (subscriptionId !== null) {
+      updates.stripe_subscription_id = subscriptionId;
+    }
 
-  const priceId =
-    params.priceIdOverride === undefined
-      ? params.subscription?.items?.data?.[0]?.price?.id ?? null
-      : params.priceIdOverride;
+    const priceId =
+      params.priceIdOverride === undefined
+        ? params.subscription?.items?.data?.[0]?.price?.id ?? null
+        : params.priceIdOverride;
 
-  if (priceId !== undefined) {
-    updates.stripe_price_id = priceId;
+    if (priceId !== undefined) {
+      updates.stripe_price_id = priceId;
+    }
   }
 
   const status = params.overrideStatus ?? params.subscription?.status ?? null;
   const periodEndIso = toIsoString(params.subscription?.current_period_end);
 
-  if (status !== null) {
+  if (billingColumnsAvailable && status !== null) {
     updates.subscription_status = status;
   }
 
-  if (params.subscription) {
-    updates.current_period_end = periodEndIso;
-    updates.cancel_at_period_end = params.subscription.cancel_at_period_end ?? false;
-  } else if (status !== null) {
-    updates.cancel_at_period_end = false;
-    updates.current_period_end = periodEndIso;
+  if (billingColumnsAvailable) {
+    if (params.subscription) {
+      updates.current_period_end = periodEndIso;
+      updates.cancel_at_period_end = params.subscription.cancel_at_period_end ?? false;
+    } else if (status !== null) {
+      updates.cancel_at_period_end = false;
+      updates.current_period_end = periodEndIso;
+    }
   }
 
   const nextRole = determineNextRole(profile.user_role, status, periodEndIso);
@@ -232,13 +274,14 @@ const handleCheckoutSessionCompleted = async (
 
   const subscription = subscriptionId ? await fetchSubscription(stripe, subscriptionId) : null;
 
-  const profile = await fetchProfileById(supabase, userId);
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await fetchProfileById(supabase, userId, billingColumnsAvailable);
 
   if (!profile) {
     throw new Error(`プロフィールが見つかりません (user_id=${userId})`);
   }
 
-  await applySubscriptionUpdate(supabase, profile, {
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
     userId,
     customerId,
     subscription,
@@ -266,13 +309,14 @@ const handleSubscriptionUpdated = async (
     throw new Error(`subscription.updated に顧客情報が含まれていません (subscription_id=${subscription.id})`);
   }
 
-  const profile = await resolveProfileForCustomer(supabase, stripe, customerId);
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await resolveProfileForCustomer(supabase, stripe, customerId, billingColumnsAvailable);
 
   if (!profile) {
     throw new Error(`顧客に紐づくプロフィールが見つかりません (customer_id=${customerId})`);
   }
 
-  await applySubscriptionUpdate(supabase, profile, {
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
     userId: profile.id,
     customerId,
     subscription,
@@ -301,7 +345,8 @@ const handleInvoicePaid = async (
     throw new Error(`invoice.paid に顧客情報が含まれていません (invoice_id=${invoice.id})`);
   }
 
-  const profile = await resolveProfileForCustomer(supabase, stripe, customerId);
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await resolveProfileForCustomer(supabase, stripe, customerId, billingColumnsAvailable);
 
   if (!profile) {
     throw new Error(`顧客に紐づくプロフィールが見つかりません (customer_id=${customerId})`);
@@ -316,7 +361,7 @@ const handleInvoicePaid = async (
   const subscription = await fetchSubscription(stripe, subscriptionId);
   const priceId = invoice.lines?.data?.[0]?.price?.id ?? subscription.items?.data?.[0]?.price?.id ?? null;
 
-  await applySubscriptionUpdate(supabase, profile, {
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
     userId: profile.id,
     customerId,
     subscription,
@@ -346,7 +391,8 @@ const handleInvoicePaymentFailed = async (
     throw new Error(`invoice.payment_failed に顧客情報が含まれていません (invoice_id=${invoice.id})`);
   }
 
-  const profile = await resolveProfileForCustomer(supabase, stripe, customerId);
+  const billingColumnsAvailable = await ensureBillingColumnsAvailability(supabase);
+  const profile = await resolveProfileForCustomer(supabase, stripe, customerId, billingColumnsAvailable);
 
   if (!profile) {
     throw new Error(`顧客に紐づくプロフィールが見つかりません (customer_id=${customerId})`);
@@ -361,7 +407,7 @@ const handleInvoicePaymentFailed = async (
   const subscription = await fetchSubscription(stripe, subscriptionId);
   const priceId = invoice.lines?.data?.[0]?.price?.id ?? subscription.items?.data?.[0]?.price?.id ?? null;
 
-  await applySubscriptionUpdate(supabase, profile, {
+  await applySubscriptionUpdate(supabase, profile, billingColumnsAvailable, {
     userId: profile.id,
     customerId,
     subscription,

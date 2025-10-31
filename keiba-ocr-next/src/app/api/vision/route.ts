@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { FEATURE_MESSAGES, resolvePlan } from "@/lib/plans";
 import { buildUsageSnapshot, getUsageMonthKey, type OcrUsageSnapshot } from "@/lib/ocrUsage";
 import { createSupabaseRouteClient } from "@/lib/supabaseRouteClient";
+import type { Database } from "@/types/database";
+
+type ProfileRoleInfo = Pick<Database["public"]["Tables"]["profiles"]["Row"], "user_role">;
+type UsageMonthlyInfo = Pick<
+  Database["public"]["Tables"]["ocr_usage_monthly"]["Row"],
+  "usage_count"
+>;
 
 export const runtime = "nodejs";
 
@@ -40,7 +47,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .select("user_role")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<ProfileRoleInfo>();
 
     if (profileError) {
       console.error("ユーザープロフィールの取得に失敗", profileError);
@@ -63,7 +70,7 @@ export async function POST(request: NextRequest) {
         .select("usage_count")
         .eq("user_id", user.id)
         .eq("usage_month", usageMonth)
-        .maybeSingle();
+        .maybeSingle<UsageMonthlyInfo>();
 
       if (usageError) {
         console.error("OCR利用状況の取得に失敗", usageError);
@@ -155,7 +162,7 @@ export async function POST(request: NextRequest) {
         .select("usage_count")
         .eq("user_id", user.id)
         .eq("usage_month", usageMonth)
-        .maybeSingle();
+        .maybeSingle<UsageMonthlyInfo>();
 
       if (updatedUsageError) {
         console.error("OCR利用状況の再取得に失敗", updatedUsageError);
