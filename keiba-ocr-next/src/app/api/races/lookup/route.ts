@@ -42,9 +42,31 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as LookupRequestBody;
     const { date, track, raceNumber } = body;
 
-    if (!isValidDate(date) || !isValidTrack(track) || !isValidRaceNumber(raceNumber)) {
+    const hasDateInput =
+      typeof date !== "undefined" &&
+      date !== null &&
+      !(typeof date === "string" && date.trim().length === 0);
+
+    if (hasDateInput && !isValidDate(date)) {
       return NextResponse.json({ error: "入力が不正です" }, { status: 400 });
     }
+
+    if (!isValidTrack(track) || !isValidRaceNumber(raceNumber)) {
+      return NextResponse.json({ error: "入力が不正です" }, { status: 400 });
+    }
+
+    const resolvedDate = (() => {
+      if (hasDateInput && isValidDate(date)) {
+        return date;
+      }
+
+      const now = new Date();
+      const tokyoNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+      const year = tokyoNow.getFullYear();
+      const month = String(tokyoNow.getMonth() + 1).padStart(2, "0");
+      const day = String(tokyoNow.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    })();
 
     const parsedRaceNumber = typeof raceNumber === "number" ? raceNumber : Number.parseInt(raceNumber, 10);
 
@@ -91,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const japaneseDate = (() => {
-      const [year, month, day] = date.split("-");
+      const [year, month, day] = resolvedDate.split("-");
       return `${year}年${Number.parseInt(month, 10)}月${Number.parseInt(day, 10)}日`;
     })();
 
@@ -99,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = [
       "以下の開催情報に基づいて、日本の公式競馬レース名（重賞・特別を含む）を特定してください。",
-      `- 開催日: ${japaneseDate} (ISO: ${date})`,
+      `- 開催日: ${japaneseDate} (ISO: ${resolvedDate})`,
       `- 開催場: ${trackForPrompt}`,
       `- 競走番号: 第${parsedRaceNumber}競走 (${parsedRaceNumber}R)`,
       "過去の開催結果や番組表など、公的に公開されている情報を参照して正確なレース名を回答してください。",
