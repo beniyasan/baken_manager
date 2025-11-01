@@ -2287,7 +2287,12 @@ async function extractDataFromText(text) {
   }
 
   // 3. 購入元の判定
-  if (workText.includes('SPAT4') || workText.includes('Spat4')) {
+  if (workText.includes('紙馬券')) {
+    const paperTicketRadio = document.querySelector('input[value="紙馬券"]');
+    if (paperTicketRadio) paperTicketRadio.checked = true;
+    else document.getElementById('bet-source').value = '紙馬券';
+    debugLog('✓ 購入元: 紙馬券');
+  } else if (workText.includes('SPAT4') || workText.includes('Spat4')) {
     const spat4Radio = document.querySelector('input[value="Spat4"]');
     if (spat4Radio) spat4Radio.checked = true;
     else document.getElementById('bet-source').value = 'Spat4';

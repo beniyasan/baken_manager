@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       "### 出力要件",
       "- 数値は可能な限り正確に整数で推定し、不明な場合は 0 を設定してください。",
       "- JSON でのみ回答し、以下の形式を厳守してください:",
-      '  {"date":"YYYY-MM-DD or null","source":"即pat|Spat4|その他","track":"競馬場名 or null","raceName":"レース名 or null","payout":number,"bets":[{"type":"券種","numbers":["1","2"],"amount":number}],"memo":null}',
+      '  {"date":"YYYY-MM-DD or null","source":"即pat|Spat4|紙馬券|その他","track":"競馬場名 or null","raceName":"レース名 or null","payout":number,"bets":[{"type":"券種","numbers":["1","2"],"amount":number}],"memo":null}',
       "- bets 配列には、券種ごとに購入した 1 点 (=1 組み合わせ) を 1 要素として列挙してください。",
       "",
       "### フォーメーション・流しなど複数行構造の扱い",

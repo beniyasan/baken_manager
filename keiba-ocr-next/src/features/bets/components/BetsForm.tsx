@@ -36,7 +36,6 @@ const RACE_SOURCES = [
   { value: "即pat", label: "即PAT" },
   { value: "Spat4", label: "SPAT4" },
   { value: "紙馬券", label: "紙馬券" },
-  { value: "その他", label: "その他" },
 ];
 
 const defaultTicket: BetTicket = {
