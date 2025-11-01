@@ -35,6 +35,7 @@ const BET_TYPES = [
 const RACE_SOURCES = [
   { value: "即pat", label: "即PAT" },
   { value: "Spat4", label: "SPAT4" },
+  { value: "紙馬券", label: "紙馬券" },
 ];
 
 const defaultTicket: BetTicket = {

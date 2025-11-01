@@ -115,7 +115,9 @@ export const parseOcrText = (rawText: string): ParsedOcrResult => {
     }
   }
 
-  if (text.includes("SPAT4") || text.includes("Spat4")) {
+  if (text.includes("紙馬券")) {
+    result.source = "紙馬券";
+  } else if (text.includes("SPAT4") || text.includes("Spat4")) {
     result.source = "Spat4";
   } else if (text.includes("即pat") || text.includes("即PAT") || text.includes("iPAT")) {
     result.source = "即pat";
